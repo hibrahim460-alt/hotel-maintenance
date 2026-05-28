@@ -5,18 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hotel Maintenance System</title>
 
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Google Fonts: DM Serif Display + DM Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-  <!-- Tabler Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css" />
 
-  <!-- Socket.io Client (served by the Express backend) -->
   <script src="/socket.io/socket.io.js"></script>
 
   <script>
@@ -28,30 +24,6 @@
             display: ['"DM Serif Display"', 'serif'],
             sans:    ['"DM Sans"', 'sans-serif'],
             mono:    ['"DM Mono"', 'monospace'],
-          },
-          colors: {
-            navy:  { DEFAULT: '#1b2a4a', 50: '#eef1f7', 100: '#d4dcea', 700: '#243460', 900: '#0f1b31' },
-            gold:  { DEFAULT: '#c9943a', light: '#f0c675', dark: '#9a6e25' },
-            slate: { soft: '#f4f6fb' }
-          },
-          animation: {
-            'slide-in-right': 'slideInRight 0.35s cubic-bezier(0.16,1,0.3,1)',
-            'slide-out-right': 'slideOutRight 0.3s ease-in forwards',
-            'pop-in':  'popIn 0.4s cubic-bezier(0.34,1.56,0.64,1)',
-            'fade-in': 'fadeIn 0.4s ease-out',
-            'row-flash': 'rowFlash 1.2s ease-out',
-            'ping-slow': 'ping 2s cubic-bezier(0,0,.2,1) infinite',
-          },
-          keyframes: {
-            slideInRight:  { from: { transform: 'translateX(110%)', opacity: '0' }, to: { transform: 'translateX(0)', opacity: '1' } },
-            slideOutRight: { from: { transform: 'translateX(0)',    opacity: '1' }, to: { transform: 'translateX(110%)', opacity: '0' } },
-            popIn:   { from: { transform: 'scale(0.8)', opacity: '0' }, to: { transform: 'scale(1)', opacity: '1' } },
-            fadeIn:  { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
-            rowFlash: {
-              '0%':   { backgroundColor: 'rgba(201,148,58,0.25)' },
-              '60%':  { backgroundColor: 'rgba(201,148,58,0.10)' },
-              '100%': { backgroundColor: 'transparent' },
-            },
           }
         }
       }
@@ -59,1489 +31,628 @@
   </script>
 
   <style>
-    /* ── Base Reset ────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; }
-    body { font-family: 'DM Sans', sans-serif; background: #f4f6fb; color: #1b2a4a; }
-
-    /* ── Custom Scrollbar ────────────────────────────────── */
-    ::-webkit-scrollbar        { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track  { background: transparent; }
-    ::-webkit-scrollbar-thumb  { background: #c9d4e8; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: #a0b0cc; }
-
-    /* ── Typography ──────────────────────────────────────── */
-    .font-display { font-family: 'DM Serif Display', serif; }
-
-    /* ── Status Badges ───────────────────────────────────── */
-    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px;
-             border-radius: 99px; font-size: 11px; font-weight: 500; letter-spacing: 0.03em; }
-    .badge-open      { background: #fff3e0; color: #b45309; border: 1px solid #f9d593; }
-    .badge-completed { background: #e6f9f1; color: #166534; border: 1px solid #86efac; }
-
-    /* ── Category Chips ──────────────────────────────────── */
-    .cat-chip { display: inline-flex; align-items: center; gap: 5px;
-                padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; }
-    .cat-toilet      { background:#eff6ff; color:#1d4ed8; }
-    .cat-ac          { background:#ecfeff; color:#0e7490; }
-    .cat-carpet      { background:#fefce8; color:#a16207; }
-    .cat-wood        { background:#fff7ed; color:#9a3412; }
-    .cat-tiles       { background:#f1f5f9; color:#475569; }
-    .cat-painting    { background:#fdf4ff; color:#7e22ce; }
-    .cat-room-smell  { background:#f0fdf4; color:#15803d; }
-    .cat-electricity { background:#fefce8; color:#854d0e; }
-
-    /* ── Toast Notification ──────────────────────────────── */
-    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999;
-                       display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-    .toast { display: flex; align-items: flex-start; gap: 12px; min-width: 300px; max-width: 380px;
-             padding: 14px 16px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.14);
-             pointer-events: all; animation: slideInRight 0.35s cubic-bezier(0.16,1,0.3,1); }
-    .toast-success { background: #fff; border-left: 4px solid #22c55e; }
-    .toast-alert   { background: #fff; border-left: 4px solid #f59e0b; }
-    .toast-error   { background: #fff; border-left: 4px solid #ef4444; }
-    .toast-icon    { width: 32px; height: 32px; border-radius: 8px; display: flex;
-                     align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; }
-    .toast-icon-success { background: #dcfce7; color: #16a34a; }
-    .toast-icon-alert   { background: #fef9c3; color: #d97706; }
-    .toast-icon-error   { background: #fee2e2; color: #dc2626; }
-    .toast-title   { font-size: 13px; font-weight: 600; color: #1b2a4a; }
-    .toast-body    { font-size: 12px; color: #64748b; margin-top: 2px; line-height: 1.4; }
-    .toast-exit    { animation: slideOutRight 0.3s ease-in forwards; }
-
-    /* ── Sidebar ─────────────────────────────────────────── */
-    .sidebar { width: 240px; min-height: 100vh; background: #1b2a4a;
-               display: flex; flex-direction: column; flex-shrink: 0; }
-    .sidebar-logo { padding: 28px 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-    .sidebar-nav  { padding: 16px 12px; flex: 1; }
-    .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
-
-    /* ── Stat Card ───────────────────────────────────────── */
-    .stat-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
-                 padding: 20px; display: flex; flex-direction: column; gap: 6px; }
-    .stat-number { font-size: 32px; font-weight: 700; line-height: 1; }
-    .stat-label  { font-size: 12px; color: #64748b; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
-
-    /* ── Data Table ──────────────────────────────────────── */
-    .data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-    .data-table th { background: #f8fafc; font-size: 11px; font-weight: 600; color: #64748b;
-                     text-transform: uppercase; letter-spacing: 0.06em; padding: 10px 14px;
-                     border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
-    .data-table th:first-child { border-radius: 8px 0 0 0; }
-    .data-table th:last-child  { border-radius: 0 8px 0 0; }
-    .data-table td { padding: 13px 14px; font-size: 13px; border-bottom: 1px solid #f1f5f9;
-                     vertical-align: middle; color: #334155; }
-    .data-table tr:last-child td { border-bottom: none; }
-    .data-table tr:hover td { background: #fafbff; }
-    .data-table .row-new td { animation: rowFlash 1.2s ease-out; }
-
-    /* ── Form ────────────────────────────────────────────── */
-    .form-label { font-size: 12px; font-weight: 600; color: #475569;
-                  text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 6px; }
-    .form-input, .form-select, .form-textarea {
-      width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px;
-      padding: 10px 12px; font-size: 14px; font-family: 'DM Sans', sans-serif;
-      color: #1b2a4a; background: #fff; transition: border-color 0.15s, box-shadow 0.15s;
-      outline: none;
-    }
-    .form-input:focus, .form-select:focus, .form-textarea:focus {
-      border-color: #c9943a; box-shadow: 0 0 0 3px rgba(201,148,58,0.12);
-    }
-    .form-input.error, .form-select.error, .form-textarea.error {
-      border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.10);
-    }
-    .form-textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
-    .form-select   { appearance: none; cursor: pointer;
-                     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-                     background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
-
-    /* ── Buttons ─────────────────────────────────────────── */
-    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px;
-           border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
-           border: none; transition: all 0.15s; text-decoration: none; white-space: nowrap; }
-    .btn:active { transform: scale(0.97); }
-    .btn-primary { background: #1b2a4a; color: #fff; }
-    .btn-primary:hover { background: #243460; }
-    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
-    .btn-gold   { background: #c9943a; color: #fff; }
-    .btn-gold:hover { background: #b07e2e; }
-    .btn-done   { background: #dcfce7; color: #15803d; border: 1px solid #86efac;
-                  padding: 7px 14px; font-size: 12px; }
-    .btn-done:hover { background: #bbf7d0; }
-    .btn-done:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-    .btn-ghost  { background: transparent; color: #64748b; border: 1px solid #e2e8f0; }
-    .btn-ghost:hover { background: #f8fafc; }
-
-    /* ── Card ────────────────────────────────────────────── */
-    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; }
-    .card-header { padding: 18px 20px 14px; border-bottom: 1px solid #f1f5f9;
-                   display: flex; align-items: center; justify-content: space-between; }
-    .card-body   { padding: 20px; }
-
-    /* ── Role Selection ──────────────────────────────────── */
-    #role-select-screen { min-height: 100vh; display: flex; flex-direction: column;
-                          align-items: center; justify-content: center;
-                          background: linear-gradient(135deg, #1b2a4a 0%, #243460 60%, #1b2a4a 100%);
-                          padding: 24px; }
-    .role-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
-                 border-radius: 20px; padding: 36px 32px; cursor: pointer; text-align: center;
-                 transition: all 0.2s; width: 220px; }
-    .role-card:hover { background: rgba(255,255,255,0.11); border-color: #c9943a;
-                       transform: translateY(-4px); box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-    .role-icon { width: 64px; height: 64px; border-radius: 16px; margin: 0 auto 16px;
-                 display: flex; align-items: center; justify-content: center; font-size: 28px; }
-
-    /* ── Ping dot ────────────────────────────────────────── */
-    .live-dot { position: relative; display: inline-flex; }
-    .live-dot::before { content: ''; position: absolute; inset: 0; border-radius: 50%;
-                        background: #22c55e; animation: ping 2s cubic-bezier(0,0,.2,1) infinite; }
-    .live-dot-inner { width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
-                      position: relative; z-index: 1; }
-
-    /* ── Elapsed timer ───────────────────────────────────── */
-    .elapsed { font-family: 'DM Mono', monospace; font-size: 12px; color: #94a3b8; }
-    .elapsed-warn { color: #d97706; font-weight: 500; }
-    .elapsed-crit { color: #dc2626; font-weight: 600; }
-
-    /* ── Empty state ─────────────────────────────────────── */
-    .empty-state { padding: 48px 24px; text-align: center; color: #94a3b8; }
-    .empty-state i { font-size: 40px; margin-bottom: 12px; display: block; opacity: 0.4; }
-
-    /* ── Resolved row ────────────────────────────────────── */
-    .resolved-row { padding: 14px 0; border-bottom: 1px solid #f1f5f9;
-                    display: flex; align-items: center; gap: 14px; animation: fadeIn 0.4s ease-out; }
-    .resolved-row:last-child { border-bottom: none; }
-
-    /* ── Notification banner (maintenance incoming alert) ── */
-    #notif-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 8888;
-                    transform: translateY(-100%); transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
-                    background: #1b2a4a; color: #fff; padding: 14px 20px;
-                    display: flex; align-items: center; gap: 14px;
-                    box-shadow: 0 8px 32px rgba(27,42,74,0.4); }
-    #notif-banner.visible { transform: translateY(0); }
-
-    /* ── Scrollable table wrapper ────────────────────────── */
-    .table-scroll { overflow-x: auto; border-radius: 0 0 14px 14px; }
-
-    /* ── Pulse indicator (new request) ──────────────────── */
-    @keyframes pulseRing {
-      0%   { transform: scale(1);   opacity: 0.8; }
-      100% { transform: scale(2.2); opacity: 0; }
-    }
+    body { font-family: 'DM Sans', sans-serif; }
+    h1, h2, h3 { font-family: 'DM Serif Display', serif; }
   </style>
 </head>
+<body class="bg-[#FAF9F5] text-stone-800 min-h-screen selection:bg-amber-100 selection:text-stone-900 antialiased">
 
-<body>
-
-<!-- ═══════════════════════════════════════════════════════════
-     TOAST CONTAINER
-═══════════════════════════════════════════════════════════ -->
-<div id="toast-container" aria-live="polite"></div>
-
-<!-- ═══════════════════════════════════════════════════════════
-     INCOMING REQUEST BANNER (Maintenance only)
-═══════════════════════════════════════════════════════════ -->
-<div id="notif-banner" role="alert">
-  <div style="background:rgba(201,148,58,0.25);border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-    <i class="ti ti-bell-ringing" style="font-size:20px;color:#f0c675;"></i>
-  </div>
-  <div style="flex:1;">
-    <div style="font-weight:600;font-size:14px;" id="notif-title">New maintenance request</div>
-    <div style="font-size:12px;color:rgba(255,255,255,0.65);" id="notif-body">Room — · Issue —</div>
-  </div>
-  <button onclick="closeBanner()" style="background:rgba(255,255,255,0.1);border:none;border-radius:6px;color:#fff;padding:6px 10px;cursor:pointer;font-size:12px;">Dismiss</button>
-</div>
-
-
-<!-- ═══════════════════════════════════════════════════════════
-     SCREEN 1 — ROLE SELECTION
-═══════════════════════════════════════════════════════════ -->
-<div id="role-select-screen">
-
-  <!-- Hotel Brand -->
-  <div style="text-align:center;margin-bottom:48px;">
-    <div style="display:inline-flex;align-items:center;gap:12px;margin-bottom:14px;">
-      <div style="width:48px;height:48px;background:rgba(201,148,58,0.2);border:1px solid rgba(201,148,58,0.4);border-radius:12px;display:flex;align-items:center;justify-content:center;">
-        <i class="ti ti-building" style="font-size:24px;color:#f0c675;"></i>
+  <header class="border-b border-stone-200/80 bg-white/70 backdrop-blur-md sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="h-10 w-10 rounded-xl bg-amber-600 flex items-center justify-center shadow-md shadow-amber-600/10">
+        <i class="ti ti-hotel-service text-white text-xl"></i>
       </div>
-      <span class="font-display" style="font-size:28px;color:#fff;letter-spacing:0.01em;">WH Hotel</span>
-    </div>
-    <p style="color:rgba(255,255,255,0.45);font-size:14px;letter-spacing:0.08em;text-transform:uppercase;font-weight:500;">Maintenance Operations System</p>
-  </div>
-
-  <!-- Role Cards -->
-  <div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-bottom:40px;">
-
-    <div class="role-card" onclick="selectRole('reception')" tabindex="0" role="button" aria-label="Enter as Front Desk Reception">
-      <div class="role-icon" style="background:rgba(201,148,58,0.15);border:1px solid rgba(201,148,58,0.25);">
-        <i class="ti ti-desk" style="color:#f0c675;"></i>
-      </div>
-      <div class="font-display" style="font-size:18px;color:#fff;margin-bottom:8px;">Front Desk</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.5;">Submit guest requests &amp; monitor resolution</div>
-      <div style="margin-top:18px;display:inline-flex;align-items:center;gap:6px;background:rgba(201,148,58,0.2);border:1px solid rgba(201,148,58,0.3);border-radius:6px;padding:6px 14px;font-size:12px;color:#f0c675;font-weight:500;">
-        Reception Portal <i class="ti ti-arrow-right" style="font-size:12px;"></i>
-      </div>
-    </div>
-
-    <div class="role-card" onclick="selectRole('maintenance')" tabindex="0" role="button" aria-label="Enter as Maintenance Department">
-      <div class="role-icon" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);">
-        <i class="ti ti-tool" style="color:#4ade80;"></i>
-      </div>
-      <div class="font-display" style="font-size:18px;color:#fff;margin-bottom:8px;">Maintenance</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.45);line-height:1.5;">View live requests &amp; mark jobs complete</div>
-      <div style="margin-top:18px;display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:6px;padding:6px 14px;font-size:12px;color:#4ade80;font-weight:500;">
-        Operations Panel <i class="ti ti-arrow-right" style="font-size:12px;"></i>
-      </div>
-    </div>
-
-  </div>
-
-  <p style="color:rgba(255,255,255,0.25);font-size:12px;">Open both roles in separate browser tabs for live sync demo</p>
-</div>
-
-
-<!-- ═══════════════════════════════════════════════════════════
-     SCREEN 2 — RECEPTION PANEL
-═══════════════════════════════════════════════════════════ -->
-<div id="reception-panel" style="display:none;min-height:100vh;flex-direction:row;">
-
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-logo">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:36px;height:36px;background:rgba(201,148,58,0.2);border:1px solid rgba(201,148,58,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center;">
-          <i class="ti ti-building" style="font-size:18px;color:#f0c675;"></i>
-        </div>
-        <div>
-          <div class="font-display" style="font-size:15px;color:#fff;line-height:1.1;">Grand Palace</div>
-          <div style="font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:0.1em;text-transform:uppercase;">Hotel System</div>
-        </div>
-      </div>
-    </div>
-
-    <nav class="sidebar-nav">
-      <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.3);letter-spacing:0.1em;text-transform:uppercase;padding:0 8px;margin-bottom:8px;">Reception</div>
-      <a href="#" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:rgba(201,148,58,0.15);border:1px solid rgba(201,148,58,0.2);color:#f0c675;text-decoration:none;font-size:13px;font-weight:500;margin-bottom:4px;">
-        <i class="ti ti-send" style="font-size:16px;"></i> New Request
-      </a>
-      <a href="#" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:rgba(255,255,255,0.5);text-decoration:none;font-size:13px;margin-bottom:4px;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">
-        <i class="ti ti-list-check" style="font-size:16px;"></i> Today's Requests
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div class="live-dot"><div class="live-dot-inner"></div></div>
-        <span style="font-size:11px;color:rgba(255,255,255,0.4);">Live sync active</span>
-      </div>
-      <div style="margin-top:10px;">
-        <button onclick="selectRole(null)" style="background:rgba(255,255,255,0.06);border:none;color:rgba(255,255,255,0.4);font-size:11px;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;">
-          <i class="ti ti-logout" style="font-size:13px;"></i> Switch Role
-        </button>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Main Content -->
-  <main style="flex:1;overflow-y:auto;padding:28px;">
-
-    <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;">
       <div>
-        <h1 class="font-display" style="font-size:26px;color:#1b2a4a;margin:0 0 4px;">Front Desk Reception</h1>
-        <p style="font-size:13px;color:#64748b;margin:0;" id="reception-date-display"></p>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 14px;">
-        <div class="live-dot"><div class="live-dot-inner"></div></div>
-        <span style="font-size:12px;font-weight:500;color:#1b2a4a;">Connected</span>
-        <span style="font-size:11px;color:#94a3b8;" id="r-clients-count"></span>
+        <h1 class="text-xl font-bold tracking-tight text-stone-900">Grand Horizon</h1>
+        <p class="text-xs font-mono uppercase tracking-wider text-stone-500">Maintenance Request Desk</p>
       </div>
     </div>
 
-    <!-- Main Grid -->
-    <div style="display:grid;grid-template-columns:360px 1fr;gap:24px;align-items:start;">
-
-      <!-- ── LEFT: Submission Form ─────────────────────────── -->
-      <div>
-        <div class="card">
-          <div class="card-header">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div style="width:32px;height:32px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;">
-                <i class="ti ti-clipboard-plus" style="font-size:16px;color:#2563eb;"></i>
-              </div>
-              <div>
-                <div style="font-size:14px;font-weight:600;color:#1b2a4a;">New Request</div>
-                <div style="font-size:11px;color:#94a3b8;">Guest maintenance issue</div>
-              </div>
-            </div>
-          </div>
-          <div class="card-body">
-            <form id="request-form" onsubmit="handleSubmit(event)" novalidate>
-
-              <div style="margin-bottom:16px;">
-                <label class="form-label" for="guest-name">Guest Name <span style="color:#ef4444;">*</span></label>
-                <input type="text" id="guest-name" class="form-input" placeholder="e.g. John Smith" maxlength="80" />
-                <div class="field-error" id="err-guest-name" style="display:none;font-size:11px;color:#ef4444;margin-top:4px;"></div>
-              </div>
-
-              <div style="margin-bottom:16px;">
-                <label class="form-label" for="room-number">Room Number <span style="color:#ef4444;">*</span></label>
-                <input type="text" id="room-number" class="form-input" placeholder="e.g. 214" maxlength="10" />
-                <div class="field-error" id="err-room-number" style="display:none;font-size:11px;color:#ef4444;margin-top:4px;"></div>
-              </div>
-
-              <div style="margin-bottom:16px;">
-                <label class="form-label" for="request-datetime">Date &amp; Time</label>
-                <input type="text" id="request-datetime" class="form-input" readonly
-                       style="background:#f8fafc;color:#64748b;cursor:default;font-family:'DM Mono',monospace;font-size:13px;" />
-                <div style="font-size:10px;color:#94a3b8;margin-top:4px;">Auto-set to current system time</div>
-              </div>
-
-              <div style="margin-bottom:16px;">
-                <label class="form-label" for="issue-category">Issue Category <span style="color:#ef4444;">*</span></label>
-                <select id="issue-category" class="form-select">
-                  <option value="">— Select category —</option>
-                  <option value="Toilet">🚽 Toilet</option>
-                  <option value="AC">❄️ AC / Air Conditioning</option>
-                  <option value="Carpet">🟫 Carpet</option>
-                  <option value="Wood">🪵 Wood / Furniture</option>
-                  <option value="Tiles">🔲 Tiles / Flooring</option>
-                  <option value="Painting">🖌️ Painting / Walls</option>
-                  <option value="Room Smell">💨 Room Smell</option>
-                  <option value="Electricity">⚡ Electricity</option>
-                </select>
-                <div class="field-error" id="err-issue-category" style="display:none;font-size:11px;color:#ef4444;margin-top:4px;"></div>
-              </div>
-
-              <div style="margin-bottom:20px;">
-                <label class="form-label" for="notes">Additional Notes</label>
-                <textarea id="notes" class="form-textarea" placeholder="Describe the issue in detail (optional)..." maxlength="500"></textarea>
-                <div style="text-align:right;font-size:10px;color:#94a3b8;margin-top:3px;" id="notes-counter">0 / 500</div>
-              </div>
-
-              <button type="submit" id="submit-btn" class="btn btn-primary" style="width:100%;justify-content:center;">
-                <i class="ti ti-send" style="font-size:15px;"></i>
-                Submit Request
-              </button>
-              <div id="submit-error" style="display:none;margin-top:8px;font-size:12px;color:#ef4444;text-align:center;"></div>
-
-            </form>
-          </div>
-        </div>
+    <div class="flex items-center space-x-6">
+      <div class="text-right">
+        <p id="live-date" class="text-sm font-medium text-stone-800">Thursday, May 28</p>
+        <p id="live-clock" class="text-xs font-mono text-stone-500">12:00:00 PM</p>
       </div>
-
-      <!-- ── RIGHT: Live Dashboard ─────────────────────────── -->
-      <div style="display:flex;flex-direction:column;gap:20px;">
-
-        <!-- Open Requests -->
-        <div class="card">
-          <div class="card-header">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div style="width:32px;height:32px;background:#fff3e0;border-radius:8px;display:flex;align-items:center;justify-content:center;">
-                <i class="ti ti-clock" style="font-size:16px;color:#d97706;"></i>
-              </div>
-              <div>
-                <div style="font-size:14px;font-weight:600;color:#1b2a4a;">Open Requests Today</div>
-                <div style="font-size:11px;color:#94a3b8;">Awaiting resolution</div>
-              </div>
-            </div>
-            <span id="r-open-count" class="badge badge-open">0 open</span>
-          </div>
-          <div id="r-open-list" style="padding:4px 16px 8px;">
-            <div class="empty-state">
-              <i class="ti ti-clipboard-off"></i>
-              <div style="font-size:13px;font-weight:500;color:#cbd5e1;">No open requests today</div>
-              <div style="font-size:12px;margin-top:4px;">Use the form to submit a new request</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Resolved Today -->
-        <div class="card">
-          <div class="card-header">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <div style="width:32px;height:32px;background:#e6f9f1;border-radius:8px;display:flex;align-items:center;justify-content:center;">
-                <i class="ti ti-circle-check" style="font-size:16px;color:#16a34a;"></i>
-              </div>
-              <div>
-                <div style="font-size:14px;font-weight:600;color:#1b2a4a;">Resolved Today</div>
-                <div style="font-size:11px;color:#94a3b8;">Completed with timestamps</div>
-              </div>
-            </div>
-            <span id="r-done-count" class="badge badge-completed">0 done</span>
-          </div>
-          <div id="r-done-list" style="padding:4px 16px 8px;">
-            <div class="empty-state">
-              <i class="ti ti-mood-happy"></i>
-              <div style="font-size:13px;font-weight:500;color:#cbd5e1;">No completions yet</div>
-              <div style="font-size:12px;margin-top:4px;">Resolved cases appear here instantly</div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /right column -->
-    </div><!-- /grid -->
-  </main>
-</div><!-- /reception-panel -->
-
-
-<!-- ═══════════════════════════════════════════════════════════
-     SCREEN 3 — MAINTENANCE PANEL
-═══════════════════════════════════════════════════════════ -->
-<div id="maintenance-panel" style="display:none;min-height:100vh;flex-direction:row;">
-
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-logo">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:36px;height:36px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.25);border-radius:8px;display:flex;align-items:center;justify-content:center;">
-          <i class="ti ti-tool" style="font-size:18px;color:#4ade80;"></i>
-        </div>
-        <div>
-          <div class="font-display" style="font-size:15px;color:#fff;line-height:1.1;">Maintenance</div>
-          <div style="font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:0.1em;text-transform:uppercase;">Operations</div>
-        </div>
+      <div id="connection-status" class="flex items-center space-x-2 bg-stone-100 px-3 py-1.5 rounded-full border border-stone-200">
+        <span class="h-2 w-2 rounded-full bg-stone-300 animate-pulse"></span>
+        <span class="text-xs font-mono uppercase tracking-wider text-stone-600">Connecting</span>
       </div>
     </div>
+  </header>
 
-    <nav class="sidebar-nav">
-      <div style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.3);letter-spacing:0.1em;text-transform:uppercase;padding:0 8px;margin-bottom:8px;">Operations</div>
-      <a href="#" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);color:#4ade80;text-decoration:none;font-size:13px;font-weight:500;margin-bottom:4px;">
-        <i class="ti ti-layout-dashboard" style="font-size:16px;"></i> Live Dashboard
-      </a>
-    </nav>
+  <main id="screen-role-select" class="max-w-2xl mx-auto px-6 py-20 text-center">
+    <div class="space-y-4 mb-12">
+      <h2 class="text-4xl font-bold text-stone-900 tracking-tight sm:text-5xl">Select Workspace Dashboard</h2>
+      <p class="text-stone-500 max-w-md mx-auto">Please select your operating role to sync real-time tasks with the system pipeline.</p>
+    </div>
 
-    <!-- Daily Stats Mini -->
-    <div style="padding:0 12px;flex:1;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:16px;">
-      <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px;">
-        <div style="font-size:10px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;">Today's Summary</div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <span style="font-size:12px;color:rgba(255,255,255,0.5);">Open</span>
-          <span style="font-size:14px;font-weight:600;color:#f59e0b;" id="m-sidebar-open">0</span>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <button onclick="selectRole('reception')" class="group text-left p-8 bg-white border border-stone-200 rounded-3xl shadow-sm hover:shadow-xl hover:border-amber-600/30 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2">
+        <div class="h-14 w-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700 mb-6 group-hover:bg-amber-600 group-hover:text-white transition-all duration-300">
+          <i class="ti ti-concierge-desk text-2xl"></i>
         </div>
-        <div style="display:flex;justify-content:space-between;">
-          <span style="font-size:12px;color:rgba(255,255,255,0.5);">Completed</span>
-          <span style="font-size:14px;font-weight:600;color:#4ade80;" id="m-sidebar-done">0</span>
+        <h3 class="text-2xl font-bold text-stone-900 group-hover:text-amber-800 transition-colors">Front Desk Reception</h3>
+        <p class="text-stone-500 text-sm mt-2">Log guest issues, select urgency categories, track repair statuses, and communicate real-time needs immediately.</p>
+        <div class="mt-6 inline-flex items-center text-sm font-semibold text-amber-700 group-hover:translate-x-1 transition-transform">
+          Open Console <i class="ti ti-arrow-right ml-1 text-xs"></i>
         </div>
-      </div>
-      <button onclick="selectRole(null)" style="margin-top:10px;background:rgba(255,255,255,0.06);border:none;color:rgba(255,255,255,0.4);font-size:11px;padding:6px 12px;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;width:100%;">
-        <i class="ti ti-logout" style="font-size:13px;"></i> Switch Role
+      </button>
+
+      <button onclick="selectRole('maintenance')" class="group text-left p-8 bg-white border border-stone-200 rounded-3xl shadow-sm hover:shadow-xl hover:border-emerald-600/30 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
+        <div class="h-14 w-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
+          <i class="ti ti-tools text-2xl"></i>
+        </div>
+        <h3 class="text-2xl font-bold text-stone-900 group-hover:text-emerald-800 transition-colors">Maintenance Engineering</h3>
+        <p class="text-stone-500 text-sm mt-2">Receive active room alerts, monitor assignment queue metrics, resolve work tickets, and push real-time resolutions.</p>
+        <div class="mt-6 inline-flex items-center text-sm font-semibold text-emerald-700 group-hover:translate-x-1 transition-transform">
+          Open Console <i class="ti ti-arrow-right ml-1 text-xs"></i>
+        </div>
       </button>
     </div>
-  </aside>
-
-  <!-- Main Content -->
-  <main style="flex:1;overflow-y:auto;padding:28px;">
-
-    <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;">
-      <div>
-        <h1 class="font-display" style="font-size:26px;color:#1b2a4a;margin:0 0 4px;">Operations Dashboard</h1>
-        <p style="font-size:13px;color:#64748b;margin:0;" id="maintenance-date-display"></p>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <button onclick="loadTodayRequests(true)" class="btn btn-ghost" style="font-size:12px;padding:8px 14px;">
-          <i class="ti ti-refresh" style="font-size:14px;"></i> Refresh
-        </button>
-        <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 14px;">
-          <div class="live-dot"><div class="live-dot-inner"></div></div>
-          <span style="font-size:12px;font-weight:500;color:#1b2a4a;">Live</span>
-          <span style="font-size:11px;color:#94a3b8;" id="m-clients-count"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Stat Cards -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px;">
-
-      <div class="stat-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div class="stat-label">Open</div>
-          <div style="width:28px;height:28px;background:#fff3e0;border-radius:6px;display:flex;align-items:center;justify-content:center;">
-            <i class="ti ti-alert-circle" style="font-size:14px;color:#d97706;"></i>
-          </div>
-        </div>
-        <div class="stat-number" style="color:#d97706;" id="stat-open">0</div>
-        <div style="font-size:11px;color:#94a3b8;">Awaiting action</div>
-      </div>
-
-      <div class="stat-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div class="stat-label">Completed</div>
-          <div style="width:28px;height:28px;background:#e6f9f1;border-radius:6px;display:flex;align-items:center;justify-content:center;">
-            <i class="ti ti-circle-check" style="font-size:14px;color:#16a34a;"></i>
-          </div>
-        </div>
-        <div class="stat-number" style="color:#16a34a;" id="stat-done">0</div>
-        <div style="font-size:11px;color:#94a3b8;">Today's total</div>
-      </div>
-
-      <div class="stat-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div class="stat-label">Total Today</div>
-          <div style="width:28px;height:28px;background:#eff6ff;border-radius:6px;display:flex;align-items:center;justify-content:center;">
-            <i class="ti ti-clipboard-list" style="font-size:14px;color:#2563eb;"></i>
-          </div>
-        </div>
-        <div class="stat-number" style="color:#2563eb;" id="stat-total">0</div>
-        <div style="font-size:11px;color:#94a3b8;">All submissions</div>
-      </div>
-
-      <div class="stat-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <div class="stat-label">Avg. Resolution</div>
-          <div style="width:28px;height:28px;background:#fdf4ff;border-radius:6px;display:flex;align-items:center;justify-content:center;">
-            <i class="ti ti-clock-hour-4" style="font-size:14px;color:#7e22ce;"></i>
-          </div>
-        </div>
-        <div class="stat-number" style="color:#7e22ce;font-size:22px;" id="stat-avg">—</div>
-        <div style="font-size:11px;color:#94a3b8;">Minutes average</div>
-      </div>
-
-    </div>
-
-    <!-- ── Active Requests Table ───────────────────────────── -->
-    <div class="card" style="margin-bottom:24px;">
-      <div class="card-header">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:32px;height:32px;background:#fff3e0;border-radius:8px;display:flex;align-items:center;justify-content:center;">
-            <i class="ti ti-tools" style="font-size:16px;color:#d97706;"></i>
-          </div>
-          <div>
-            <div style="font-size:14px;font-weight:600;color:#1b2a4a;">Active Requests</div>
-            <div style="font-size:11px;color:#94a3b8;">Requires maintenance action</div>
-          </div>
-        </div>
-        <span id="m-open-count" class="badge badge-open">0 open</span>
-      </div>
-      <div class="table-scroll">
-        <table class="data-table" id="m-active-table">
-          <thead>
-            <tr>
-              <th style="width:48px;">#</th>
-              <th>Room</th>
-              <th>Guest</th>
-              <th>Category</th>
-              <th>Notes</th>
-              <th>Submitted</th>
-              <th>Elapsed</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="m-active-tbody">
-            <tr><td colspan="8">
-              <div class="empty-state">
-                <i class="ti ti-mood-happy"></i>
-                <div style="font-size:13px;font-weight:500;color:#cbd5e1;">No active requests</div>
-                <div style="font-size:12px;margin-top:4px;">All clear — new requests appear here in real time</div>
-              </div>
-            </td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ── Completed Today ────────────────────────────────── -->
-    <div class="card">
-      <div class="card-header">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:32px;height:32px;background:#e6f9f1;border-radius:8px;display:flex;align-items:center;justify-content:center;">
-            <i class="ti ti-circle-check" style="font-size:16px;color:#16a34a;"></i>
-          </div>
-          <div>
-            <div style="font-size:14px;font-weight:600;color:#1b2a4a;">Completed Today</div>
-            <div style="font-size:11px;color:#94a3b8;">Daily resolution archive with timestamps</div>
-          </div>
-        </div>
-        <span id="m-done-count" class="badge badge-completed">0 done</span>
-      </div>
-      <div class="table-scroll">
-        <table class="data-table" id="m-done-table">
-          <thead>
-            <tr>
-              <th style="width:48px;">#</th>
-              <th>Room</th>
-              <th>Guest</th>
-              <th>Category</th>
-              <th>Submitted</th>
-              <th>Completed At</th>
-              <th>Duration</th>
-            </tr>
-          </thead>
-          <tbody id="m-done-tbody">
-            <tr><td colspan="7">
-              <div class="empty-state">
-                <i class="ti ti-clipboard-off"></i>
-                <div style="font-size:13px;font-weight:500;color:#cbd5e1;">No completed requests yet</div>
-              </div>
-            </td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
   </main>
-</div><!-- /maintenance-panel -->
 
-
-<!-- ═══════════════════════════════════════════════════════════
-     APPLICATION JAVASCRIPT
-═══════════════════════════════════════════════════════════ -->
-<script>
-'use strict';
-
-/* ─────────────────────────────────────────────────────────
-   Application State
-───────────────────────────────────────────────────────── */
-const AppState = {
-  socket:       null,
-  role:         null,
-  todayRequests: [],   // Array<RequestRecord> — source of truth, kept in sync
-  elapsedTimer: null,  // setInterval handle for updating elapsed time cells
-};
-
-/* ─────────────────────────────────────────────────────────
-   Helpers — Time & Formatting
-───────────────────────────────────────────────────────── */
-/**
- * Format an ISO timestamp → "HH:MM AM/PM"
- * @param {string} iso
- * @returns {string}
- */
-function fmtTime(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-}
-
-/**
- * Format an ISO timestamp → "Mon DD, YYYY HH:MM AM/PM"
- * @param {string} iso
- * @returns {string}
- */
-function fmtDateTime(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  });
-}
-
-/**
- * Compute how many minutes have elapsed since an ISO timestamp.
- * @param {string} iso
- * @returns {number}
- */
-function minutesSince(iso) {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-}
-
-/**
- * Format elapsed minutes → human-readable string.
- * @param {number} mins
- * @returns {string}
- */
-function fmtElapsed(mins) {
-  if (mins < 1)   return '< 1 min';
-  if (mins < 60)  return `${mins} min`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
-
-/**
- * Format duration between two ISO timestamps.
- * @param {string} start
- * @param {string} end
- * @returns {string}
- */
-function fmtDuration(start, end) {
-  if (!start || !end) return '—';
-  const mins = Math.floor((new Date(end) - new Date(start)) / 60000);
-  return fmtElapsed(mins);
-}
-
-/**
- * Update the clock display in the reception form.
- */
-function updateClock() {
-  const el = document.getElementById('request-datetime');
-  if (el) {
-    el.value = new Date().toLocaleString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', second: '2-digit'
-    });
-  }
-}
-
-/** Update current date display in panel headers */
-function updateDateDisplays() {
-  const txt = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
-  });
-  const rd = document.getElementById('reception-date-display');
-  const md = document.getElementById('maintenance-date-display');
-  if (rd) rd.textContent = txt;
-  if (md) md.textContent = txt;
-}
-
-/* ─────────────────────────────────────────────────────────
-   Helpers — Category Styling
-───────────────────────────────────────────────────────── */
-/**
- * Map an issue category to its CSS class (for the cat-chip).
- * @param {string} cat
- * @returns {string}
- */
-function getCatClass(cat) {
-  const map = {
-    'Toilet':      'cat-toilet',
-    'AC':          'cat-ac',
-    'Carpet':      'cat-carpet',
-    'Wood':        'cat-wood',
-    'Tiles':       'cat-tiles',
-    'Painting':    'cat-painting',
-    'Room Smell':  'cat-room-smell',
-    'Electricity': 'cat-electricity',
-  };
-  return map[cat] || 'cat-tiles';
-}
-
-/**
- * Map an issue category to an icon class string.
- * @param {string} cat
- * @returns {string}
- */
-function getCatIcon(cat) {
-  const icons = {
-    'Toilet':      'ti-urgent',
-    'AC':          'ti-air-conditioning',
-    'Carpet':      'ti-layout-bottombar',
-    'Wood':        'ti-armchair',
-    'Tiles':       'ti-border-all',
-    'Painting':    'ti-brush',
-    'Room Smell':  'ti-wind',
-    'Electricity': 'ti-bolt',
-  };
-  return icons[cat] || 'ti-tool';
-}
-
-/* ─────────────────────────────────────────────────────────
-   Sound Alerts — Web Audio API
-───────────────────────────────────────────────────────── */
-let audioCtx = null;
-
-function getAudioCtx() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  return audioCtx;
-}
-
-/**
- * Play a two-tone alert sound (new request arriving at Maintenance).
- */
-function playAlertSound() {
-  try {
-    const ctx  = getAudioCtx();
-    const gain = ctx.createGain();
-    gain.connect(ctx.destination);
-    gain.gain.setValueAtTime(0.25, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-
-    [880, 660].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      osc.connect(gain);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.18);
-      osc.start(ctx.currentTime + i * 0.18);
-      osc.stop(ctx.currentTime + i * 0.18 + 0.18);
-    });
-  } catch (e) { /* Audio permission not granted — silent fallback */ }
-}
-
-/**
- * Play a success chime (request completed → Reception hears it).
- */
-function playSuccessSound() {
-  try {
-    const ctx  = getAudioCtx();
-    const gain = ctx.createGain();
-    gain.connect(ctx.destination);
-    gain.gain.setValueAtTime(0.2, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-
-    [523, 659, 784].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      osc.connect(gain);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
-      osc.start(ctx.currentTime + i * 0.12);
-      osc.stop(ctx.currentTime + i * 0.12 + 0.25);
-    });
-  } catch (e) {}
-}
-
-/* ─────────────────────────────────────────────────────────
-   Browser Notifications
-───────────────────────────────────────────────────────── */
-async function requestNotificationPermission() {
-  if ('Notification' in window && Notification.permission === 'default') {
-    await Notification.requestPermission();
-  }
-}
-
-/**
- * Show a browser (OS-level) notification if permission is granted.
- * @param {string} title
- * @param {string} body
- * @param {string} icon  — emoji or path
- */
-function showBrowserNotification(title, body) {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    const n = new Notification(title, { body, icon: '' });
-    setTimeout(() => n.close(), 6000);
-  }
-}
-
-/* ─────────────────────────────────────────────────────────
-   Toast Notifications
-───────────────────────────────────────────────────────── */
-/**
- * Display a floating toast notification.
- * @param {string} title
- * @param {string} body
- * @param {'success'|'alert'|'error'} type
- * @param {number} duration  — ms before auto-dismiss
- */
-function showToast(title, body, type = 'success', duration = 5000) {
-  const container = document.getElementById('toast-container');
-  const icons = {
-    success: { icon: 'ti-circle-check', cls: 'toast-icon-success' },
-    alert:   { icon: 'ti-bell',         cls: 'toast-icon-alert'   },
-    error:   { icon: 'ti-alert-circle', cls: 'toast-icon-error'   },
-  };
-  const { icon, cls } = icons[type] || icons.success;
-
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.innerHTML = `
-    <div class="toast-icon ${cls}"><i class="ti ${icon}"></i></div>
-    <div style="flex:1;">
-      <div class="toast-title">${escHtml(title)}</div>
-      ${body ? `<div class="toast-body">${escHtml(body)}</div>` : ''}
-    </div>
-    <button onclick="dismissToast(this.parentElement)"
-            style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:14px;padding:2px;">
-      <i class="ti ti-x"></i>
-    </button>
-  `;
-
-  container.appendChild(toast);
-
-  const timer = setTimeout(() => dismissToast(toast), duration);
-  toast._timer = timer;
-}
-
-function dismissToast(toast) {
-  if (!toast || !toast.parentElement) return;
-  clearTimeout(toast._timer);
-  toast.classList.add('toast-exit');
-  setTimeout(() => toast.remove(), 320);
-}
-
-/* ─────────────────────────────────────────────────────────
-   Notification Banner (Maintenance incoming alert)
-───────────────────────────────────────────────────────── */
-let bannerTimer = null;
-
-function showBanner(title, body) {
-  const banner = document.getElementById('notif-banner');
-  document.getElementById('notif-title').textContent = title;
-  document.getElementById('notif-body').textContent  = body;
-  banner.classList.add('visible');
-  clearTimeout(bannerTimer);
-  bannerTimer = setTimeout(closeBanner, 7000);
-}
-
-function closeBanner() {
-  document.getElementById('notif-banner').classList.remove('visible');
-}
-
-/* ─────────────────────────────────────────────────────────
-   Utility
-───────────────────────────────────────────────────────── */
-function escHtml(str) {
-  const d = document.createElement('div');
-  d.textContent = str ?? '';
-  return d.innerHTML;
-}
-
-/* ─────────────────────────────────────────────────────────
-   API Layer
-───────────────────────────────────────────────────────── */
-/**
- * Fetch all of today's maintenance requests from the server.
- * Populates AppState.todayRequests and triggers a full re-render.
- * @param {boolean} showFeedback — show a toast on success
- */
-async function loadTodayRequests(showFeedback = false) {
-  try {
-    const res  = await fetch('/api/requests/today');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    AppState.todayRequests = await res.json();
-    renderAll();
-    if (showFeedback) showToast('Refreshed', 'Data is up to date', 'success', 2500);
-  } catch (err) {
-    console.error('[loadTodayRequests]', err);
-    showToast('Connection Error', 'Could not load requests. Check server.', 'error');
-  }
-}
-
-/**
- * Submit a new maintenance request via REST POST.
- * On success the server broadcasts 'new_request' via Socket.io,
- * so the maintenance panel updates automatically.
- * @param {Object} payload
- */
-async function submitRequest(payload) {
-  const btn = document.getElementById('submit-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="ti ti-loader-2" style="font-size:15px;animation:spin 1s linear infinite;"></i> Submitting…';
-
-  try {
-    const res = await fetch('/api/requests', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload)
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      const msg = data.errors ? data.errors.join(', ') : (data.error || 'Submission failed');
-      throw new Error(msg);
-    }
-
-    // Optimistically add to local state
-    AppState.todayRequests.unshift(data);
-    renderAll();
-
-    // Reset form
-    document.getElementById('request-form').reset();
-    document.getElementById('notes-counter').textContent = '0 / 500';
-    showToast('Request Submitted', `Room ${data.room_number} · ${data.issue_category} sent to maintenance`, 'success');
-    document.getElementById('submit-error').style.display = 'none';
-
-  } catch (err) {
-    console.error('[submitRequest]', err);
-    const errEl = document.getElementById('submit-error');
-    errEl.textContent = err.message;
-    errEl.style.display = 'block';
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="ti ti-send" style="font-size:15px;"></i> Submit Request';
-  }
-}
-
-/**
- * Mark a request as completed via REST PATCH.
- * Server broadcasts 'request_completed' to all clients automatically.
- * @param {number} id
- */
-async function markComplete(id) {
-  const btn = document.getElementById(`btn-done-${id}`);
-  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
-
-  try {
-    const res  = await fetch(`/api/requests/${id}/complete`, { method: 'PATCH' });
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.error || 'Failed to complete');
-
-    // Update local state immediately
-    const idx = AppState.todayRequests.findIndex(r => r.id === id);
-    if (idx !== -1) AppState.todayRequests[idx] = data;
-
-    renderAll();
-    showToast('Marked Complete', `Room ${data.room_number} · ${data.issue_category} resolved`, 'success');
-
-  } catch (err) {
-    console.error('[markComplete]', err);
-    showToast('Error', err.message, 'error');
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Mark Done'; }
-  }
-}
-
-/* ─────────────────────────────────────────────────────────
-   Rendering — Reception Panel
-───────────────────────────────────────────────────────── */
-function renderReceptionOpen() {
-  const openReqs = AppState.todayRequests.filter(r => r.status === 'open');
-  const listEl   = document.getElementById('r-open-list');
-  const countEl  = document.getElementById('r-open-count');
-
-  countEl.textContent = `${openReqs.length} open`;
-
-  if (openReqs.length === 0) {
-    listEl.innerHTML = `
-      <div class="empty-state">
-        <i class="ti ti-clipboard-off"></i>
-        <div style="font-size:13px;font-weight:500;color:#cbd5e1;">No open requests today</div>
-        <div style="font-size:12px;margin-top:4px;">Use the form to submit a new request</div>
-      </div>`;
-    return;
-  }
-
-  listEl.innerHTML = openReqs.map(r => `
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9;animation:fadeIn 0.3s ease-out;">
-      <div style="width:38px;height:38px;background:#fff3e0;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i class="ti ${getCatIcon(r.issue_category)}" style="font-size:16px;color:#d97706;"></i>
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;color:#1b2a4a;">Room ${escHtml(r.room_number)} · ${escHtml(r.guest_name)}</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:3px;">
-          <span class="cat-chip ${getCatClass(r.issue_category)}">${escHtml(r.issue_category)}</span>
-          <span style="font-size:11px;color:#94a3b8;">${fmtTime(r.submitted_at)}</span>
+  <main id="screen-dashboard" class="max-w-7xl mx-auto px-6 py-8 hidden">
+    
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-stone-200 pb-6 mb-8 gap-4">
+      <div>
+        <div class="flex items-center space-x-2 text-stone-500 text-sm mb-1">
+          <span class="font-mono uppercase tracking-wider">Console Path</span>
+          <span>/</span>
+          <span id="role-breadcrumb" class="font-semibold text-stone-800 capitalize">Guest Services</span>
         </div>
-        ${r.notes ? `<div style="font-size:11px;color:#64748b;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(r.notes)}</div>` : ''}
+        <h2 id="role-title" class="text-3xl font-bold text-stone-900 tracking-tight">Reception Management</h2>
       </div>
-      <span class="badge badge-open">Pending</span>
+
+      <button onclick="exitWorkspace()" class="inline-flex items-center text-sm font-medium text-stone-500 hover:text-stone-900 transition-colors bg-stone-100 hover:bg-stone-200 px-4 py-2 rounded-xl border border-stone-200">
+        <i class="ti ti-arrows-exchange-2 mr-1.5 text-base"></i> Change Console Role
+      </button>
     </div>
-  `).join('');
-}
 
-function renderReceptionDone() {
-  const doneReqs = AppState.todayRequests.filter(r => r.status === 'completed');
-  const listEl   = document.getElementById('r-done-list');
-  const countEl  = document.getElementById('r-done-count');
-
-  countEl.textContent = `${doneReqs.length} done`;
-
-  if (doneReqs.length === 0) {
-    listEl.innerHTML = `
-      <div class="empty-state">
-        <i class="ti ti-mood-happy"></i>
-        <div style="font-size:13px;font-weight:500;color:#cbd5e1;">No completions yet</div>
-        <div style="font-size:12px;margin-top:4px;">Resolved cases appear here instantly</div>
-      </div>`;
-    return;
-  }
-
-  listEl.innerHTML = doneReqs.map(r => `
-    <div class="resolved-row">
-      <div style="width:32px;height:32px;background:#e6f9f1;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <i class="ti ti-circle-check" style="font-size:16px;color:#16a34a;"></i>
-      </div>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:600;color:#1b2a4a;">Room ${escHtml(r.room_number)} · ${escHtml(r.issue_category)}</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px;">${escHtml(r.guest_name)}</div>
-      </div>
-      <div style="text-align:right;flex-shrink:0;">
-        <div style="font-size:12px;font-weight:600;color:#16a34a;">✓ Done</div>
-        <div style="font-size:11px;color:#94a3b8;font-family:'DM Mono',monospace;">${fmtTime(r.completed_at)}</div>
-        <div style="font-size:10px;color:#cbd5e1;">${fmtDuration(r.submitted_at, r.completed_at)}</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-/* ─────────────────────────────────────────────────────────
-   Rendering — Maintenance Panel
-───────────────────────────────────────────────────────── */
-function renderMaintenanceStats() {
-  const open  = AppState.todayRequests.filter(r => r.status === 'open');
-  const done  = AppState.todayRequests.filter(r => r.status === 'completed');
-  const total = AppState.todayRequests.length;
-
-  // Compute average resolution time (minutes)
-  let avgText = '—';
-  if (done.length > 0) {
-    const avgMins = Math.round(
-      done.reduce((sum, r) => {
-        return sum + Math.floor((new Date(r.completed_at) - new Date(r.submitted_at)) / 60000);
-      }, 0) / done.length
-    );
-    avgText = `${avgMins}m`;
-  }
-
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-  set('stat-open',  open.length);
-  set('stat-done',  done.length);
-  set('stat-total', total);
-  set('stat-avg',   avgText);
-  set('m-open-count',    `${open.length} open`);
-  set('m-done-count',    `${done.length} done`);
-  set('m-sidebar-open',  open.length);
-  set('m-sidebar-done',  done.length);
-}
-
-function renderMaintenanceActiveTable() {
-  const openReqs = AppState.todayRequests.filter(r => r.status === 'open');
-  const tbody    = document.getElementById('m-active-tbody');
-  if (!tbody) return;
-
-  if (openReqs.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8">
-      <div class="empty-state">
-        <i class="ti ti-mood-happy"></i>
-        <div style="font-size:13px;font-weight:500;color:#cbd5e1;">No active requests</div>
-        <div style="font-size:12px;margin-top:4px;">New requests appear here in real time</div>
-      </div>
-    </td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = openReqs.map(r => {
-    const mins = minutesSince(r.submitted_at);
-    const elCls = mins > 60 ? 'elapsed-crit' : (mins > 30 ? 'elapsed-warn' : 'elapsed');
-    return `
-      <tr data-id="${r.id}">
-        <td style="font-family:'DM Mono',monospace;font-size:12px;color:#94a3b8;">#${r.id}</td>
-        <td>
-          <div style="font-weight:600;font-size:13px;color:#1b2a4a;">${escHtml(r.room_number)}</div>
-        </td>
-        <td style="font-size:13px;color:#334155;">${escHtml(r.guest_name)}</td>
-        <td>
-          <span class="cat-chip ${getCatClass(r.issue_category)}">
-            <i class="ti ${getCatIcon(r.issue_category)}" style="font-size:11px;"></i>
-            ${escHtml(r.issue_category)}
-          </span>
-        </td>
-        <td style="max-width:160px;">
-          <div style="font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;" title="${escHtml(r.notes)}">
-            ${r.notes ? escHtml(r.notes) : '<span style="color:#cbd5e1;font-style:italic;">No notes</span>'}
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <section class="lg:col-span-4 space-y-6">
+        
+        <div id="panel-reception-form" class="bg-white border border-stone-200/80 rounded-3xl p-6 shadow-sm hidden">
+          <div class="border-b border-stone-100 pb-4 mb-5">
+            <h3 class="text-xl font-bold text-stone-900">Log New Maintenance Item</h3>
+            <p class="text-xs text-stone-500 mt-0.5">Dispatches real-time room notifications immediately upon submission.</p>
           </div>
-        </td>
-        <td style="font-family:'DM Mono',monospace;font-size:12px;color:#64748b;white-space:nowrap;">
-          ${fmtTime(r.submitted_at)}
-        </td>
-        <td>
-          <span class="elapsed ${elCls}" data-submitted="${r.submitted_at}">${fmtElapsed(mins)}</span>
-        </td>
-        <td>
-          <button id="btn-done-${r.id}" class="btn btn-done" onclick="markComplete(${r.id})">
-            <i class="ti ti-check" style="font-size:13px;"></i> Mark Done
-          </button>
-        </td>
-      </tr>`;
-  }).join('');
-}
 
-function renderMaintenanceDoneTable() {
-  const doneReqs = AppState.todayRequests.filter(r => r.status === 'completed');
-  const tbody    = document.getElementById('m-done-tbody');
-  if (!tbody) return;
+          <form id="request-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+            <div>
+              <label for="guest_name" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Guest Full Name</label>
+              <div class="relative">
+                <i class="ti ti-user absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
+                <input type="text" id="guest_name" required placeholder="e.g. John Doe" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-sm" />
+              </div>
+            </div>
 
-  if (doneReqs.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7">
-      <div class="empty-state">
-        <i class="ti ti-clipboard-off"></i>
-        <div style="font-size:13px;font-weight:500;color:#cbd5e1;">No completed requests yet</div>
-      </div>
-    </td></tr>`;
-    return;
-  }
+            <div>
+              <label for="room_number" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Room / Suite Number</label>
+              <div class="relative">
+                <i class="ti ti-key absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
+                <input type="text" id="room_number" required placeholder="e.g. 402, PH-A" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-sm" />
+              </div>
+            </div>
 
-  tbody.innerHTML = doneReqs.map(r => `
-    <tr style="animation:fadeIn 0.4s ease-out;">
-      <td style="font-family:'DM Mono',monospace;font-size:12px;color:#94a3b8;">#${r.id}</td>
-      <td style="font-weight:600;font-size:13px;color:#1b2a4a;">${escHtml(r.room_number)}</td>
-      <td style="font-size:13px;color:#334155;">${escHtml(r.guest_name)}</td>
-      <td>
-        <span class="cat-chip ${getCatClass(r.issue_category)}">
-          <i class="ti ${getCatIcon(r.issue_category)}" style="font-size:11px;"></i>
-          ${escHtml(r.issue_category)}
-        </span>
-      </td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px;color:#94a3b8;">${fmtTime(r.submitted_at)}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></div>
-          <span style="font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:#15803d;">${fmtTime(r.completed_at)}</span>
+            <div>
+              <label for="issue_category" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Urgency Category</label>
+              <div class="relative">
+                <i class="ti ti-category absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-lg"></i>
+                <select id="issue_category" required class="w-full pl-10 pr-10 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-sm appearance-none cursor-pointer">
+                  <option value="" disabled selected>Select issue category</option>
+                  <option value="Toilet">🚽 Toilet / Plumbing</option>
+                  <option value="AC">❄️ AC / Air Conditioning</option>
+                  <option value="Carpet">🧹 Carpet / Cleaning</option>
+                  <option value="Wood">🪚 Wood / Carpentry</option>
+                  <option value="Tiles">🧱 Tiles / Masonry</option>
+                  <option value="Painting">🎨 Painting / Walls</option>
+                  <option value="Room Smell">💨 Room Smell / Ventilation</option>
+                  <option value="Electricity">⚡ Electricity / Lights</option>
+                </select>
+                <i class="ti ti-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none text-base"></i>
+              </div>
+            </div>
+
+            <div>
+              <label for="notes" class="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">Issue Details / Structural Notes</label>
+              <textarea id="notes" rows="3" placeholder="Provide additional details regarding the mechanical error..." class="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-[#FAF9F5]/40 text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-sm resize-none"></textarea>
+            </div>
+
+            <button type="submit" id="submit-btn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-3 px-4 rounded-xl shadow-md shadow-amber-600/10 hover:shadow-lg hover:shadow-amber-600/20 active:translate-y-[1px] transition-all flex items-center justify-center space-x-2 text-sm mt-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2">
+              <i class="ti ti-plus text-base"></i> <span>File Active Request</span>
+            </button>
+          </form>
         </div>
-        <div style="font-size:10px;color:#94a3b8;margin-top:2px;">${new Date(r.completed_at).toLocaleDateString()}</div>
-      </td>
-      <td>
-        <span class="badge badge-completed">${fmtDuration(r.submitted_at, r.completed_at)}</span>
-      </td>
-    </tr>
-  `).join('');
-}
 
-/* ─────────────────────────────────────────────────────────
-   Master Render — re-renders the active role's view
-───────────────────────────────────────────────────────── */
-function renderAll() {
-  if (AppState.role === 'reception') {
-    renderReceptionOpen();
-    renderReceptionDone();
-  } else if (AppState.role === 'maintenance') {
-    renderMaintenanceStats();
-    renderMaintenanceActiveTable();
-    renderMaintenanceDoneTable();
-  }
-}
+        <div id="panel-maintenance-stats" class="bg-stone-900 text-white rounded-3xl p-6 shadow-xl space-y-6 hidden relative overflow-hidden">
+          <div class="absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-emerald-600/10 blur-2xl"></div>
+          
+          <div class="border-b border-stone-800 pb-4">
+            <h3 class="text-xl font-bold text-white tracking-tight">Pipeline Control</h3>
+            <p class="text-xs text-stone-400 mt-0.5 font-mono uppercase tracking-wider">Live Engineering Data</p>
+          </div>
 
-/* ─────────────────────────────────────────────────────────
-   Elapsed Timer — updates "time since submission" cells
-   every 60 seconds without a full re-render
-───────────────────────────────────────────────────────── */
-function startElapsedTimer() {
-  clearInterval(AppState.elapsedTimer);
-  AppState.elapsedTimer = setInterval(() => {
-    document.querySelectorAll('.elapsed[data-submitted]').forEach(el => {
-      const mins  = minutesSince(el.dataset.submitted);
-      el.textContent = fmtElapsed(mins);
-      el.className = 'elapsed ' + (mins > 60 ? 'elapsed-crit' : mins > 30 ? 'elapsed-warn' : '');
-    });
-  }, 60000);
-}
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-stone-800/80 p-4 rounded-2xl border border-stone-700/30">
+              <p class="text-xs text-stone-400 font-medium uppercase tracking-wider">Active Backlog</p>
+              <p id="stat-active" class="text-4xl font-bold font-mono text-amber-500 mt-1">0</p>
+            </div>
+            <div class="bg-stone-800/80 p-4 rounded-2xl border border-stone-700/30">
+              <p class="text-xs text-stone-400 font-medium uppercase tracking-wider">Completed Today</p>
+              <p id="stat-done" class="text-4xl font-bold font-mono text-emerald-500 mt-1">0</p>
+            </div>
+          </div>
 
-/* ─────────────────────────────────────────────────────────
-   Socket.io — Real-Time Event Handling
-───────────────────────────────────────────────────────── */
-function initSocket() {
-  AppState.socket = io();
+          <div class="bg-stone-800/40 border border-stone-800 rounded-2xl p-4 flex items-center space-x-3.5">
+            <div class="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-lg border border-emerald-500/20">
+              <i class="ti ti-users"></i>
+            </div>
+            <div>
+              <p class="text-xs text-stone-400 font-medium uppercase tracking-wider">Active Workspace Sessions</p>
+              <p id="stat-clients" class="text-sm font-semibold font-mono text-white mt-0.5">1 Hub Member Connected</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-  AppState.socket.on('connect', () => {
-    console.log('[WS] Connected:', AppState.socket.id);
-    // Register our role with the server for targeted future broadcasts
-    if (AppState.role) {
-      AppState.socket.emit('register_role', AppState.role);
+      <section class="lg:col-span-8 space-y-6">
+        
+        <div class="bg-white border border-stone-200/80 rounded-3xl shadow-sm overflow-hidden">
+          <div class="px-6 py-5 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
+            <div class="flex items-center space-x-2.5">
+              <div class="h-8 w-8 rounded-lg bg-stone-100 text-stone-700 border border-stone-200/60 flex items-center justify-center text-base">
+                <i class="ti ti-layout-list"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-stone-900">Active Structural Tickets</h3>
+                <p class="text-xs text-stone-500">Live operational queues sync automatically across instances.</p>
+              </div>
+            </div>
+            <span id="queue-count-badge" class="px-2.5 py-1 bg-stone-100 border border-stone-200 font-mono text-xs text-stone-600 font-bold rounded-full">0 Pending</span>
+          </div>
+
+          <div id="requests-container" class="divide-y divide-stone-100 min-h-[300px] flex flex-col">
+            <div class="flex-1 flex flex-col items-center justify-center text-center p-12 text-stone-400">
+              <div class="h-12 w-12 rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center mb-3 text-stone-400 animate-pulse">
+                <i class="ti ti-refresh text-xl animate-spin"></i>
+              </div>
+              <p class="text-sm font-medium text-stone-500">Fetching live tracking log database...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+
+  <script>
+    /* ─────────────────────────────────────────────────────────
+       State Scope
+    ───────────────────────────────────────────────────────── */
+    const AppState = {
+      role: null,        // 'reception' or 'maintenance'
+      socket: null,      // Active socket connection
+      requests: []       // Main sync array [{id, guest_name, room_number, issue_category, notes, status, timestamp, completedAt}]
+    };
+
+    /* ─────────────────────────────────────────────────────────
+       Real-Time Sockets Engine
+    ───────────────────────────────────────────────────────── */
+    function initSocket() {
+      const statusIndicator = document.getElementById('connection-status');
+      
+      // Connects cleanly to relative location (Render host environment domain)
+      AppState.socket = io();
+
+      AppState.socket.on('connect', () => {
+        statusIndicator.className = "flex items-center space-x-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200/60 text-emerald-700";
+        statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span><span class="text-xs font-mono uppercase tracking-wider font-semibold">Live Pipeline Sync</span>`;
+        
+        // Re-authenticate role context upon pipeline resets
+        if (AppState.role) {
+          AppState.socket.emit('register_role', AppState.role);
+        }
+      });
+
+      AppState.socket.on('disconnect', () => {
+        statusIndicator.className = "flex items-center space-x-2 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-200/60 text-rose-700";
+        statusIndicator.innerHTML = `<span class="h-2 w-2 rounded-full bg-rose-500 animate-pulse"></span><span class="text-xs font-mono uppercase tracking-wider font-semibold">Connection Lost</span>`;
+      });
+
+      // WebSocket Core Inbound Events Broadcasts
+      AppState.socket.on('new_request', (request) => {
+        AppState.requests.unshift(request);
+        renderRequests();
+        triggerAudioChime();
+        triggerBrowserNotification("New Task Issued", `Room ${request.room_number}: ${request.issue_category}`);
+      });
+
+      AppState.socket.on('request_completed', (updatedRequest) => {
+        const target = AppState.requests.find(r => r.id === updatedRequest.id);
+        if (target) {
+          target.status = 'completed';
+          target.completedAt = updatedRequest.completedAt;
+        } else {
+          // Fallback if missing context profile
+          AppState.requests.push(updatedRequest);
+        }
+        renderRequests();
+        if (AppState.role === 'reception') {
+          triggerAudioChime();
+          triggerBrowserNotification("Task Completed", `Room ${updatedRequest.room_number} issue resolved.`);
+        }
+      });
+
+      AppState.socket.on('clients_count', (count) => {
+        const txt = document.getElementById('stat-clients');
+        if (txt) {
+          txt.textContent = `${count} Hub Member${count === 1 ? '' : 's'} Connected`;
+        }
+      });
     }
-  });
 
-  AppState.socket.on('disconnect', (reason) => {
-    console.warn('[WS] Disconnected:', reason);
-  });
-
-  /**
-   * 'new_request' — A new maintenance request was submitted by Reception.
-   * Maintenance: show banner + sound + add row to table.
-   * Reception:   add to open requests list.
-   */
-  AppState.socket.on('new_request', (request) => {
-    console.log('[WS] new_request:', request);
-
-    // Avoid duplicate if we submitted it ourselves (already added optimistically)
-    const exists = AppState.todayRequests.some(r => r.id === request.id);
-    if (!exists) {
-      AppState.todayRequests.unshift(request);
+    /* ─────────────────────────────────────────────────────────
+       Asynchronous REST Fetch Infrastructure
+    ───────────────────────────────────────────────────────── */
+    async function loadTodayRequests() {
+      try {
+        const response = await fetch('/api/requests/today');
+        if (!response.ok) throw new Error('Database pipeline transmission dropped.');
+        AppState.requests = await response.json();
+        
+        // Sort newest first
+        AppState.requests.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+        renderRequests();
+      } catch (err) {
+        console.error("Pipeline failure:", err);
+        document.getElementById('requests-container').innerHTML = `
+          <div class="p-12 text-center text-rose-600 flex-1 flex flex-col items-center justify-center">
+            <i class="ti ti-alert-triangle text-3xl mb-2"></i>
+            <p class="text-sm font-semibold">Failed to populate tracking pipeline database.</p>
+            <p class="text-xs text-stone-400 mt-1">Check Render cluster runtime parameters logs.</p>
+          </div>
+        `;
+      }
     }
 
-    if (AppState.role === 'maintenance') {
-      renderAll();
+    /* ─────────────────────────────────────────────────────────
+       Submissions Engine
+    ───────────────────────────────────────────────────────── */
+    async function handleFormSubmit(event) {
+      event.preventDefault();
+      
+      const guestName = document.getElementById('guest_name').value.trim();
+      const roomNumber = document.getElementById('room_number').value.trim();
+      const categorySelect = document.getElementById('issue_category');
+      const notes = document.getElementById('notes').value.trim();
 
-      // Highlight the new row briefly
-      setTimeout(() => {
-        const row = document.querySelector(`tr[data-id="${request.id}"]`);
-        if (row) row.classList.add('row-new');
-      }, 50);
+      const submitBtn = document.getElementById('submit-btn');
+      const originalBtnContent = submitBtn.innerHTML;
 
-      playAlertSound();
-      showBanner(
-        `New Request — Room ${request.room_number}`,
-        `${request.issue_category}${request.notes ? ' · ' + request.notes.slice(0, 60) : ''}`
-      );
-      showToast(
-        `New: Room ${request.room_number}`,
-        `${request.guest_name} · ${request.issue_category}`,
-        'alert'
-      );
-      showBrowserNotification(
-        `🔔 New Maintenance Request — Room ${request.room_number}`,
-        `${request.issue_category} · ${request.guest_name}`
-      );
+      // Ensure exact snake_case fields matching target Express parameters
+      const requestData = {
+        guest_name: guestName,
+        room_number: roomNumber,
+        issue_category: categorySelect.value, // FIXED: Now passes structural value instead of entire display text label
+        notes: notes
+      };
 
-    } else if (AppState.role === 'reception') {
-      renderAll();
+      // Loading state UI lock
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="ti ti-loader text-base animate-spin"></i> <span>Processing...</span>`;
+
+      try {
+        const response = await fetch('/api/requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestData)
+        });
+
+        if (!response.ok) {
+          const failureContext = await response.json();
+          throw new Error(failureContext.errors?.join(', ') || 'Submission cluster returned structural error rejection.');
+        }
+
+        // Complete flush success UI interaction resets
+        document.getElementById('request-form').reset();
+        
+      } catch (err) {
+        alert(`Form validation rejected:\n${err.message}`);
+        console.error("Submission rejected:", err);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnContent;
+      }
     }
-  });
 
-  /**
-   * 'request_completed' — Maintenance marked a job as done.
-   * Reception: show ✅ alert + play success sound + move to resolved list.
-   * Maintenance: move row from active to completed.
-   */
-  AppState.socket.on('request_completed', (updatedRequest) => {
-    console.log('[WS] request_completed:', updatedRequest);
+    async function markAsResolved(id, btnElement) {
+      const originalContent = btnElement.innerHTML;
+      btnElement.disabled = true;
+      btnElement.innerHTML = `<i class="ti ti-loader text-xs animate-spin"></i>`;
 
-    const idx = AppState.todayRequests.findIndex(r => r.id === updatedRequest.id);
-    if (idx !== -1) {
-      AppState.todayRequests[idx] = updatedRequest;
-    } else {
-      AppState.todayRequests.unshift(updatedRequest);
+      try {
+        const response = await fetch(`/api/requests/${id}/complete`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) throw new Error('PATCH target state synchronization failed on backend storage container.');
+        
+      } catch (err) {
+        alert(err.message);
+        btnElement.disabled = false;
+        btnElement.innerHTML = originalContent;
+      }
     }
 
-    renderAll();
+    /* ─────────────────────────────────────────────────────────
+       Dynamic Rendering DOM Engine
+    ───────────────────────────────────────────────────────── */
+    function renderRequests() {
+      const container = document.getElementById('requests-container');
+      const badgeCount = document.getElementById('queue-count-badge');
+      
+      // Compute dashboard stats aggregates
+      const pendingItems = AppState.requests.filter(r => r.status === 'pending');
+      const completedItems = AppState.requests.filter(r => r.status === 'completed');
 
-    if (AppState.role === 'reception') {
-      playSuccessSound();
-      showToast(
-        `✅ Request Resolved!`,
-        `Room ${updatedRequest.room_number} · ${updatedRequest.issue_category} · Completed at ${fmtTime(updatedRequest.completed_at)}`,
-        'success',
-        7000
-      );
-      showBrowserNotification(
-        `✅ Maintenance Complete — Room ${updatedRequest.room_number}`,
-        `${updatedRequest.issue_category} resolved at ${fmtTime(updatedRequest.completed_at)}`
-      );
+      // Update structural badges
+      badgeCount.textContent = `${pendingItems.length} Pending`;
+      
+      const sActive = document.getElementById('stat-active');
+      const sDone = document.getElementById('stat-done');
+      if (sActive) sActive.textContent = pendingItems.length;
+      if (sDone) sDone.textContent = completedItems.length;
 
-    } else if (AppState.role === 'maintenance') {
-      showToast('Marked Complete', `Room ${updatedRequest.room_number} archived`, 'success', 3000);
+      if (AppState.requests.length === 0) {
+        container.innerHTML = `
+          <div class="flex-1 flex flex-col items-center justify-center text-center p-16 text-stone-400">
+            <div class="h-12 w-12 rounded-full bg-stone-100 flex items-center justify-center mb-3 text-stone-400 border border-stone-200/40">
+              <i class="ti ti-clipboard-check text-xl"></i>
+            </div>
+            <p class="text-sm font-semibold text-stone-700">Clear Operating Queue</p>
+            <p class="text-xs text-stone-400 mt-0.5 max-w-xs">No active maintenance items have been registered on the server log files today.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = AppState.requests.map(req => {
+        const isPending = req.status === 'pending';
+        const dateObj = new Date(req.timestamp);
+        const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        // Category Badge generation style layout matrix mappings
+        const catMap = {
+          Toilet: 'bg-blue-50 text-blue-700 border-blue-200/50',
+          AC: 'bg-sky-50 text-sky-700 border-sky-200/50',
+          Carpet: 'bg-amber-50 text-amber-800 border-amber-200/50',
+          Wood: 'bg-orange-50 text-orange-800 border-orange-200/50',
+          Tiles: 'bg-stone-100 text-stone-700 border-stone-200/60',
+          Painting: 'bg-purple-50 text-purple-700 border-purple-200/50',
+          'Room Smell': 'bg-rose-50 text-rose-700 border-rose-200/50',
+          Electricity: 'bg-yellow-50 text-yellow-800 border-yellow-200/60'
+        };
+        const catStyle = catMap[req.issue_category] || 'bg-stone-50 text-stone-700 border-stone-200';
+
+        return `
+          <div class="p-5 hover:bg-stone-50/70 transition-all duration-150 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ${!isPending ? 'bg-stone-50/40 opacity-70' : ''}">
+            <div class="space-y-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2 py-0.5 rounded font-mono text-xs font-bold bg-stone-900 text-white tracking-wide">RM ${req.room_number}</span>
+                <span class="px-2.5 py-0.5 border rounded-full text-xs font-medium ${catStyle}">${req.issue_category}</span>
+                ${isPending 
+                  ? `<span class="inline-flex items-center text-[11px] font-medium text-amber-600 bg-amber-50/50 border border-amber-200/30 px-2 py-0.5 rounded-full"><span class="h-1 w-1 rounded-full bg-amber-500 mr-1.5 animate-ping"></span>Queue Waiting</span>`
+                  : `<span class="inline-flex items-center text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200/40 px-2 py-0.5 rounded-full"><i class="ti ti-check mr-1"></i> Resolved</span>`
+                }
+              </div>
+              
+              <div class="text-sm text-stone-800">
+                <span class="font-semibold text-stone-950">${req.guest_name}</span>
+                ${req.notes ? `<span class="text-stone-400 mx-1.5">—</span> <span class="text-stone-600 text-xs sm:text-sm italic">${req.notes}</span>` : ''}
+              </div>
+
+              <div class="flex items-center space-x-3 text-xs text-stone-400 font-mono">
+                <span class="flex items-center"><i class="ti ti-clock mr-1"></i> Logged: ${timeStr}</span>
+                ${!isPending && req.completedAt 
+                  ? `<span class="flex items-center text-stone-500"><i class="ti ti-calendar-check mr-1"></i> Done: ${new Date(req.completedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>` 
+                  : ''
+                }
+                ${isPending && AppState.role === 'maintenance' 
+                  ? `<span data-time="${req.timestamp}" class="elapsed-timer text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded">0m elapsed</span>` 
+                  : ''
+                }
+              </div>
+            </div>
+
+            <div class="sm:text-right flex items-center sm:justify-end">
+              ${isPending && AppState.role === 'maintenance'
+                ? `<button onclick="markAsResolved('${req.id}', this)" class="w-full sm:w-auto inline-flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-xl text-xs shadow-md shadow-emerald-600/10 active:translate-y-[1px] transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500"><i class="ti ti-check text-sm"></i> <span>Complete Job</span></button>`
+                : ''
+              }
+              ${!isPending 
+                ? `<span class="text-xs font-mono text-stone-400 hidden sm:block">Archived Ticket</span>` 
+                : ''
+              }
+            </div>
+          </div>
+        `;
+      }).join('');
     }
-  });
 
-  /**
-   * 'clients_count' — Server broadcasts connected client count.
-   * Useful for confirming both panels are open simultaneously.
-   */
-  AppState.socket.on('clients_count', (count) => {
-    const txt = `${count} ${count === 1 ? 'client' : 'clients'}`;
-    const rc = document.getElementById('r-clients-count');
-    const mc = document.getElementById('m-clients-count');
-    if (rc) rc.textContent = txt;
-    if (mc) mc.textContent = txt;
-  });
-}
+    /* ─────────────────────────────────────────────────────────
+       Elapsed Timer Calculations Engine
+    ───────────────────────────────────────────────────────── */
+    let elapsedIntervalId = null;
+    function startElapsedTimer() {
+      if (elapsedIntervalId) clearInterval(elapsedIntervalId);
+      
+      const updateTimers = () => {
+        document.querySelectorAll('.elapsed-timer').forEach(el => {
+          const loggedTime = new Date(el.getAttribute('data-time'));
+          const diffMs = new Date() - loggedTime;
+          const diffMins = Math.floor(diffMs / 60000);
+          
+          if (diffMins < 1) {
+            el.textContent = 'Just now';
+          } else {
+            el.textContent = `${diffMins}m elapsed`;
+            if (diffMins >= 30) el.className = "elapsed-timer text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded animate-pulse";
+            else if (diffMins >= 15) el.className = "elapsed-timer text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded";
+          }
+        });
+      };
+      
+      updateTimers();
+      elapsedIntervalId = setInterval(updateTimers, 30000);
+    }
 
-/* ─────────────────────────────────────────────────────────
-   Form Handling — Reception Submit
-───────────────────────────────────────────────────────── */
-function handleSubmit(e) {
-  e.preventDefault();
+    /* ─────────────────────────────────────────────────────────
+       Multimedia Capabilities Notifications
+    ───────────────────────────────────────────────────────── */
+    function triggerAudioChime() {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Chime note 1
+        const osc1 = audioContext.createOscillator();
+        const gain1 = audioContext.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+        gain1.gain.setValueAtTime(0.15, audioContext.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.4);
+        osc1.connect(gain1);
+        gain1.connect(audioContext.destination);
+        osc1.start();
+        osc1.stop(audioContext.currentTime + 0.4);
 
-  const guestName  = document.getElementById('guest-name').value.trim();
-  const roomNumber = document.getElementById('room-number').value.trim();
-  const category   = document.getElementById('issue-category').value;
-  const notes      = document.getElementById('notes').value.trim();
+        // Chime note 2
+        setTimeout(() => {
+          const osc2 = audioContext.createOscillator();
+          const gain2 = audioContext.createGain();
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(659.25, audioContext.currentTime); // E5
+          gain2.gain.setValueAtTime(0.15, audioContext.currentTime);
+          gain2.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+          osc2.connect(gain2);
+          gain2.connect(audioContext.destination);
+          osc2.start();
+          osc2.stop(audioContext.currentTime + 0.5);
+        }, 120);
+        
+      } catch (e) {
+        console.warn("Audio Context setup blocked until browser window gets explicit user click activity interaction response configuration rules.");
+      }
+    }
 
-  // Clear previous errors
-  ['guest-name','room-number','issue-category'].forEach(id => {
-    document.getElementById(id).classList.remove('error');
-    document.getElementById(`err-${id}`).style.display = 'none';
-  });
+    function requestNotificationPermission() {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
 
-  let valid = true;
-  const setErr = (fieldId, msg) => {
-    document.getElementById(fieldId).classList.add('error');
-    const err = document.getElementById(`err-${fieldId}`);
-    err.textContent = msg;
-    err.style.display = 'block';
-    valid = false;
-  };
+    function triggerBrowserNotification(title, body) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body, icon: '/favicon.ico' });
+      }
+    }
 
-  if (!guestName)  setErr('guest-name',      'Guest name is required');
-  if (!roomNumber) setErr('room-number',      'Room number is required');
-  if (!category)   setErr('issue-category',   'Please select an issue category');
+    /* ─────────────────────────────────────────────────────────
+       Display Tickers Clock Updates
+    ───────────────────────────────────────────────────────── */
+    function updateClock() {
+      const liveClock = document.getElementById('live-clock');
+      if (liveClock) {
+        liveClock.textContent = new Date().toLocaleTimeString([], { hour12: true });
+      }
+    }
 
-  if (!valid) return;
+    function updateDateDisplays() {
+      const liveDate = document.getElementById('live-date');
+      if (liveDate) {
+        const options = { weekday: 'long', month: 'short', day: 'numeric' };
+        liveDate.textContent = new Date().toLocaleDateString([], options);
+      }
+    }
 
-  submitRequest({ guest_name: guestName, room_number: roomNumber, issue_category: category, notes });
-}
+    /* ─────────────────────────────────────────────────────────
+       Workspace Orchestration Routing Switches
+    ───────────────────────────────────────────────────────── */
+    function selectRole(role) {
+      AppState.role = role;
 
-// Live character counter for notes textarea
-document.addEventListener('input', (e) => {
-  if (e.target.id === 'notes') {
-    document.getElementById('notes-counter').textContent = `${e.target.value.length} / 500`;
-  }
-  // Clear validation error on input
-  if (['guest-name','room-number'].includes(e.target.id)) {
-    e.target.classList.remove('error');
-    const errEl = document.getElementById(`err-${e.target.id}`);
-    if (errEl) errEl.style.display = 'none';
-  }
-});
+      // Adjust views DOM visibility matrices
+      document.getElementById('screen-role-select').classList.add('hidden');
+      document.getElementById('screen-dashboard').classList.remove('hidden');
 
-document.addEventListener('change', (e) => {
-  if (e.target.id === 'issue-category') {
-    e.target.classList.remove('error');
-    const errEl = document.getElementById('err-issue-category');
-    if (errEl) errEl.style.display = 'none';
-  }
-});
+      const rForm = document.getElementById('panel-reception-form');
+      const mStats = document.getElementById('panel-maintenance-stats');
+      const rTitle = document.getElementById('role-title');
+      const rBreadcrumb = document.getElementById('role-breadcrumb');
 
-// Keyboard: Enter to select role card
-document.querySelectorAll('.role-card').forEach(card => {
-  card.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') card.click();
-  });
-});
+      if (role === 'reception') {
+        rForm.classList.remove('hidden');
+        mStats.classList.add('hidden');
+        rTitle.textContent = "Reception Desk Tracking Console";
+        rBreadcrumb.textContent = "Guest Request Inbound Operations";
+        if (elapsedIntervalId) clearInterval(elapsedIntervalId);
+      } else {
+        mStats.classList.remove('hidden');
+        rForm.classList.add('hidden');
+        rTitle.textContent = "Maintenance Engineering Dashboard";
+        rBreadcrumb.textContent = "Active Structural Task Resolvers Pipeline";
+        startElapsedTimer();
+      }
 
-/* ─────────────────────────────────────────────────────────
-   Role Selection & Panel Navigation
-───────────────────────────────────────────────────────── */
-/**
- * Activate a role: show/hide the correct panel,
- * connect socket, register role, load today's data.
- * @param {'reception'|'maintenance'|null} role
- */
-function selectRole(role) {
-  AppState.role = role;
+      // Sync url configurations query state flags parameters maps (survives accidental refreshes)
+      const url = new URL(window.location);
+      url.searchParams.set('role', role);
+      window.history.replaceState({}, '', url);
 
-  // Hide all screens
-  document.getElementById('role-select-screen').style.display = 'none';
-  document.getElementById('reception-panel').style.display    = 'none';
-  document.getElementById('maintenance-panel').style.display  = 'none';
+      // WebSockets Pipeline Handshake Auths Registration Dispatches
+      if (AppState.socket && AppState.socket.connected) {
+        AppState.socket.emit('register_role', role);
+      }
 
-  if (!role) {
-    // Back to role selector
-    document.getElementById('role-select-screen').style.display = 'flex';
-    return;
-  }
+      requestNotificationPermission();
+      loadTodayRequests();
+      updateDateDisplays();
+    }
 
-  // Show the correct panel
-  const panelEl = document.getElementById(`${role}-panel`);
-  panelEl.style.display = 'flex';
+    function exitWorkspace() {
+      AppState.role = null;
+      if (elapsedIntervalId) clearInterval(elapsedIntervalId);
 
-  // Update URL param (for bookmarking / direct links)
-  const url = new URL(window.location);
-  url.searchParams.set('role', role);
-  window.history.replaceState({}, '', url);
+      document.getElementById('screen-dashboard').classList.add('hidden');
+      document.getElementById('screen-role-select').classList.remove('hidden');
 
-  // Socket: connect or re-register role
-  if (AppState.socket && AppState.socket.connected) {
-    AppState.socket.emit('register_role', role);
-  }
+      const url = new URL(window.location);
+      url.searchParams.delete('role');
+      window.history.replaceState({}, '', url);
+    }
 
-  // Request browser notification permission (do this on first user interaction)
-  requestNotificationPermission();
+    /* ─────────────────────────────────────────────────────────
+       Initialisation
+    ───────────────────────────────────────────────────────── */
+    function init() {
+      initSocket();
 
-  // Start elapsed timer for maintenance view
-  if (role === 'maintenance') startElapsedTimer();
+      updateClock();
+      setInterval(updateClock, 1000);
 
-  // Load today's data from server
-  loadTodayRequests();
+      // Deep URL query scanning checks routes entries configurations directly parameterizations
+      const urlRole = new URL(window.location).searchParams.get('role');
+      if (urlRole === 'reception' || urlRole === 'maintenance') {
+        selectRole(urlRole);
+      }
+    }
 
-  updateDateDisplays();
-}
+    const spinStyle = document.createElement('style');
+    spinStyle.textContent = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+    document.head.appendChild(spinStyle);
 
-/* ─────────────────────────────────────────────────────────
-   Initialisation
-───────────────────────────────────────────────────────── */
-function init() {
-  // Connect to Socket.io immediately (before role selection)
-  initSocket();
-
-  // Start clock ticker for the reception form
-  updateClock();
-  setInterval(updateClock, 1000);
-
-  // Auto-select role from URL param if present
-  const urlRole = new URL(window.location).searchParams.get('role');
-  if (urlRole === 'reception' || urlRole === 'maintenance') {
-    selectRole(urlRole);
-  }
-}
-
-// Add a CSS keyframe for button spinner (injected dynamically)
-const spinStyle = document.createElement('style');
-spinStyle.textContent = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
-document.head.appendChild(spinStyle);
-
-// Bootstrap
-document.addEventListener('DOMContentLoaded', init);
-</script>
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>

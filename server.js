@@ -37,7 +37,7 @@ function flushToDisk() {
   try {
     fs.writeFileSync(DATA_FILE, JSON.stringify(requests, null, 2), 'utf8');
   } catch (err) {
-    console.error('[DISK_ERROR] Failed writing JSON requests log array context metadata cache layer:', err);
+    console.error('[DISK_ERROR] Failed writing JSON requests log array:', err);
   }
 }
 
@@ -46,48 +46,70 @@ function loadFromDisk() {
     if (fs.existsSync(DATA_FILE)) {
       const payload = fs.readFileSync(DATA_FILE, 'utf8');
       requests = JSON.parse(payload || '[]');
-      console.log(`[DISK_BOOT] Successfully mounted ${requests.length} core request entries parameters histories records.`);
+      console.log(`[DISK_BOOT] Mounted ${requests.length} core historical entries.`);
     }
   } catch (err) {
-    console.error('[DISK_ERROR] Failed parsing persistence logs database file storage structures:', err);
+    console.error('[DISK_ERROR] Failed parsing persistence database file:', err);
     requests = [];
   }
 }
 
-/* ── Middlewares configurations ── */
+/* ── Middlewares ── */
 app.use(express.json());
-// Serves static client files instantly out of public folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-/* ── REST Endpoint Controller Actions Routing Matrix ── */
+/* ── REST Endpoints Controller Actions ── */
 
-// heartbeats testing verification link diagnostics tracker
+// Heartbeats diagnostic tracker
 app.get('/api/health', (req, res) => res.json({ status: 'healthy', uptime: process.uptime() }));
 
-// Fetch complete payload matching client tracking queries pipelines rules
+// Fetch complete live payload 
 app.get('/api/requests/today', (req, res) => {
-  // Returns historical array data safely out of internal node context runtime profiles
   return res.json(requests);
 });
 
-// Structural Post execution form dispatches entries logs
+// Dynamic date-based report filter endpoint
+app.get('/api/reports', (req, res) => {
+  const { date } = req.query; // Expects format: YYYY-MM-DD
+  
+  if (!date) {
+    return res.status(400).json({ errors: ['A valid date parameter (YYYY-MM-DD) is required.'] });
+  }
+
+  // Filter items matching the selected local date string slice
+  const filteredRequests = requests.filter(item => {
+    return item.timestamp && item.timestamp.startsWith(date);
+  });
+
+  // Calculate shift metrics dynamically
+  const total = filteredRequests.length;
+  const fixed = filteredRequests.filter(r => r.status === 'completed').length;
+  const pending = filteredRequests.filter(r => r.status === 'pending').length;
+
+  return res.json({
+    date,
+    metrics: { total, fixed, pending },
+    requests: filteredRequests
+  });
+});
+
+// Structural creation endpoint
 app.post('/api/requests', (req, res) => {
   const { guest_name, room_number, issue_category, notes = '' } = req.body;
   const errors = [];
 
-  if (!guest_name?.toString().trim())      errors.push('guest_name parameter is required.');
-  if (!room_number?.toString().trim())     errors.push('room_number parameter identifier is required.');
-  if (!issue_category?.toString().trim())  errors.push('issue_category parameters indicator is required.');
+  if (!guest_name?.toString().trim())      errors.push('guest_name is required.');
+  if (!room_number?.toString().trim())     errors.push('room_number is required.');
+  if (!issue_category?.toString().trim())  errors.push('issue_category is required.');
   
   if (issue_category && !VALID_CATEGORIES.includes(issue_category)) {
-    errors.push(`Invalid classification choice indicator context constraint. Options: ${VALID_CATEGORIES.join(', ')}`);
+    errors.push(`Invalid classification choice. Options: ${VALID_CATEGORIES.join(', ')}`);
   }
 
   if (errors.length > 0) {
     return res.status(400).json({ success: false, errors });
   }
 
-  // Generate perfect unified instance object tracking logs blocks matrix definitions
   const newRequest = {
     id: Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
     guest_name: guest_name.toString().trim(),
@@ -96,41 +118,39 @@ app.post('/api/requests', (req, res) => {
     notes: notes.toString().trim(),
     status: 'pending',
     timestamp: new Date().toISOString(),
-    completedAt: null // Perfectly maps template indicators layout criteria requirements
+    completedAt: null 
   };
 
   requests.unshift(newRequest);
   flushToDisk();
 
-  // Instant real-time push dispatches to all active clients connections sockets pipelines hub listeners
+  // Instant WebSocket transmission
   io.emit('new_request', newRequest);
 
   return res.status(201).json({ success: true, request: newRequest });
 });
 
-// Room engineering actions patches switches status values overrides toggling actions methods 
+// Room engineering completion action patches
 app.patch('/api/requests/:id/complete', (req, res) => {
   const { id } = req.params;
   const request = requests.find(r => r.id === id);
 
   if (!request) {
-    return res.status(404).json({ success: false, errors: ['Target operational sequence identifier index tracker missing.'] });
+    return res.status(404).json({ success: false, errors: ['Target ticket operational index identifier missing.'] });
   }
 
-  // Mutate data layer parameters configurations parameters safely
   request.status = 'completed';
-  request.completedAt = new Date().toISOString(); // FIXED: Matches your frontend camelCase expectation!
+  request.completedAt = new Date().toISOString(); // Synchronized camelCase matching frontend
 
   flushToDisk();
 
-  // Broadcast out the completion history updates payload safely
+  // Broadcast updates cleanly
   io.emit('request_completed', request);
 
   return res.json({ success: true, request });
 });
 
-
-/* ── Socket.io Core Engine Layer ── */
+/* ── Socket.io Connection Core ── */
 let connectedClients = 0;
 
 io.on('connection', (socket) => {
@@ -151,7 +171,7 @@ io.on('connection', (socket) => {
   });
 });
 
-/* ── Launch ── */
+/* ── Launch initialization ── */
 loadFromDisk();
 
 httpServer.listen(PORT, () => {

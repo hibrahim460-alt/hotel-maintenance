@@ -45,8 +45,22 @@ function loadFromDisk() {
   try {
     if (fs.existsSync(DATA_FILE)) {
       const payload = fs.readFileSync(DATA_FILE, 'utf8');
-      requests = JSON.parse(payload || '[]');
-      console.log(`[DISK_BOOT] Mounted ${requests.length} core historical entries.`);
+      const rawRequests = JSON.parse(payload || '[]');
+      
+      // Keep a moving retention window of exactly 7 days
+      const oneWeekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+
+      requests = rawRequests.filter(item => {
+        const itemTime = new Date(item.timestamp).getTime();
+        return !isNaN(itemTime) && itemTime >= oneWeekAgo;
+      });
+
+      if (requests.length !== rawRequests.length) {
+        flushToDisk();
+        console.log(`[CLEANUP] Automated maintenance routine purged ${rawRequests.length - requests.length} expired logs older than 7 days.`);
+      }
+
+      console.log(`[DISK_BOOT] Mounted ${requests.length} core historical entries within retention window.`);
     }
   } catch (err) {
     console.error('[DISK_ERROR] Failed parsing persistence database file:', err);
@@ -76,12 +90,10 @@ app.get('/api/reports', (req, res) => {
     return res.status(400).json({ errors: ['A valid date parameter (YYYY-MM-DD) is required.'] });
   }
 
-  // Filter items matching the selected local date string slice
   const filteredRequests = requests.filter(item => {
     return item.timestamp && item.timestamp.startsWith(date);
   });
 
-  // Calculate shift metrics dynamically
   const total = filteredRequests.length;
   const fixed = filteredRequests.filter(r => r.status === 'completed').length;
   const pending = filteredRequests.filter(r => r.status === 'pending').length;
@@ -93,7 +105,7 @@ app.get('/api/reports', (req, res) => {
   });
 });
 
-// Structural creation endpoint
+// Ticket creation endpoint
 app.post('/api/requests', (req, res) => {
   const { guest_name, room_number, issue_category, notes = '' } = req.body;
   const errors = [];
@@ -124,27 +136,25 @@ app.post('/api/requests', (req, res) => {
   requests.unshift(newRequest);
   flushToDisk();
 
-  // Instant WebSocket transmission
   io.emit('new_request', newRequest);
 
   return res.status(201).json({ success: true, request: newRequest });
 });
 
-// Room engineering completion action patches
+// Job resolution toggle action
 app.patch('/api/requests/:id/complete', (req, res) => {
   const { id } = req.params;
   const request = requests.find(r => r.id === id);
 
   if (!request) {
-    return res.status(404).json({ success: false, errors: ['Target ticket operational index identifier missing.'] });
+    return res.status(404).json({ success: false, errors: ['Target operational index identifier missing.'] });
   }
 
   request.status = 'completed';
-  request.completedAt = new Date().toISOString(); // Synchronized camelCase matching frontend
+  request.completedAt = new Date().toISOString();
 
   flushToDisk();
 
-  // Broadcast updates cleanly
   io.emit('request_completed', request);
 
   return res.json({ success: true, request });
@@ -171,7 +181,6 @@ io.on('connection', (socket) => {
   });
 });
 
-/* ── Launch initialization ── */
 loadFromDisk();
 
 httpServer.listen(PORT, () => {

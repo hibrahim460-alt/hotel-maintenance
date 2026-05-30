@@ -4,14 +4,13 @@
   "icons": [
     {
       "src": "/icon.png",
-      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "sizes": "512x512"
     }
   ],
-  "start_url": "/?standalone=true",
+  "start_url": "/?utm_source=pwa",
   "background_color": "#FAF9F5",
-  "theme_color": "#D97706",
+  "theme-color": "#D97706",
   "display": "standalone",
   "orientation": "portrait"
 }

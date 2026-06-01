@@ -3,7 +3,13 @@
   "name": "WH Hotel Operational Service Hub",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/2983/2983780.png",
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"

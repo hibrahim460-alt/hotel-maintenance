@@ -4,12 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WH Hotel - Operational Service Hub</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#292524">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body class="bg-stone-100 text-stone-900 font-sans min-h-screen">
 
-  <div id="screen-role-select" class="max-w-4xl mx-auto px-6 py-20 text-center">
+  <div id="screen-role-select" class="max-w-4xl mx-auto px-6 py-16 text-center">
+    
+    <div id="install-container" class="hidden mb-8 max-w-md mx-auto p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between shadow-xs">
+      <div class="text-left">
+        <p class="text-sm font-bold text-stone-800">Access Workspace Faster</p>
+        <p class="text-xs text-stone-500">Add WH App to your Home Screen</p>
+      </div>
+      <button id="btn-install" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg transition shadow-xs">
+        📲 Install App
+      </button>
+    </div>
+
     <h1 class="text-4xl font-extrabold mb-4 text-stone-800">WH Hotel Workspace</h1>
     <p class="text-stone-600 mb-12">Select your operational interface to interact with real-time pipelines.</p>
     
@@ -119,18 +132,37 @@
     const socket = io();
     let currentRole = '';
     let globalRequestsArray = [];
+    let deferredPrompt;
     
-    // Housekeeping tasks for separation check
     const housekeepingTasks = [
-      "In-house Room Cleaning",
-      "Room Check-out",
-      "add-Extra Bed",
-      "add Baby-Crib ",
-      "Extra Bath Towel",
-      "Extra Hand Towel",
-      "add Shampoo",
-      "add Shower Gel"
+      "In-house Room Cleaning", "Room Check-out", "add-Extra Bed", 
+      "add Baby-Crib ", "Extra Bath Towel", "Extra Hand Towel", 
+      "add Shampoo", "add Shower Gel"
     ];
+
+    // 📡 REGISTER PWA SERVICE WORKER FOR MOBILE INSTALL CAPABILITY
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.log(err));
+      });
+    }
+
+    // Capture install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('install-container').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-install').addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        document.getElementById('install-container').classList.add('hidden');
+      }
+      deferredPrompt = null;
+    });
 
     async function loadLiveQueueData() {
       try {
@@ -157,7 +189,6 @@
         formPanel.classList.add('hidden');
         pipelinePanel.className = "lg:col-span-3 bg-white p-6 rounded-xl border border-stone-200";
       }
-      socket.emit('register_role', role);
       loadLiveQueueData();
     }
 

@@ -63,11 +63,14 @@
             <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Task Category</label>
             <select id="issue_category" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
               <optgroup label="🧹 HOUSEKEEPING DEPT">
-                <option value="Room Cleaning">Room Cleaning - Full Checkout</option>
-                <option value="Extra Bedding">Extra Pillows / Towels / Blankets</option>
-                <option value="Baby Crib / Bed">Baby Crib / Extra Bed Delivery</option>
-                <option value="Guest Supplies">Extra Shampoo / Coffee Tray / Bottled Water</option>
-                <option value="Minibar Restock">Minibar Restock</option>
+                <option value="In-house Room Cleaning">In-house Room Cleaning</option>
+                <option value="Room Check-out">Room Check-out</option>
+                <option value="add-Extra Bed">add-Extra Bed</option>
+                <option value="add Baby-Crib ">add Baby-Crib </option>
+                <option value="Extra Bath Towel">Extra Bath Towel</option>
+                <option value="Extra Hand Towel">Extra Hand Towel</option>
+                <option value="add Shampoo">add Shampoo</option>
+                <option value="add Shower Gel">add Shower Gel</option>
               </optgroup>
               <optgroup label="🛠️ MAINTENANCE ENGINEERING DEPT">
                 <option value="General Repair">General Maintenance Repair</option>
@@ -108,7 +111,18 @@
     const socket = io();
     let currentRole = '';
     let globalRequestsArray = [];
-    const housekeepingTasks = ["Room Cleaning", "Extra Bedding", "Baby Crib / Bed", "Guest Supplies", "Minibar Restock"];
+    
+    // 📋 NEW UPDATED EXACT MATCH REGISTRY FOR ROUTING FILTERS
+    const housekeepingTasks = [
+      "In-house Room Cleaning",
+      "Room Check-out",
+      "add-Extra Bed",
+      "add Baby-Crib ",
+      "Extra Bath Towel",
+      "Extra Hand Towel",
+      "add Shampoo",
+      "add Shower Gel"
+    ];
 
     async function loadLiveQueueData() {
       try {

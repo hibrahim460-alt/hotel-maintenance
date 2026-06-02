@@ -28,7 +28,7 @@ async function handleLoginRequest(e) {
     localStorage.setItem('username', data.username);
 
     AppState.token = data.token; AppState.role = data.role; AppState.username = data.username;
-    showToast(`Access Granted. Systems Online.`, 'success');
+    showToast(`Access Verified. Initializing environment Matrix.`, 'success');
     initializeWorkspace();
   } catch (err) { showToast(err.message, 'error'); }
 }
@@ -40,58 +40,79 @@ async function initializeWorkspace() {
   const shell = document.getElementById('workspace-shell'); shell.classList.remove('hidden');
 
   const badge = document.getElementById('user-badge');
-  badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 inline-block animate-pulse"></span> CONSOLE ROOT: ${AppState.username.toUpperCase()}`;
+  badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-indigo-500 inline-block animate-pulse"></span> SYSTEM PROFILE: ${AppState.username.toUpperCase()} (${AppState.role.toUpperCase()})`;
 
   const inputTarget = document.getElementById('module-input-target');
   const displayTarget = document.getElementById('module-display-target');
-  inputTarget.innerHTML = ''; displayTarget.innerHTML = '';
-
-  if (AppState.role === 'admin') {
+  
+  // High-Tier Dynamic Canvas Injection Matrix (Admin, Executive, Operations Roles)
+  if (['admin', 'executive', 'operations'].includes(AppState.role)) {
     const shellWrapper = document.querySelector('#workspace-shell > .max-w-7xl');
     shellWrapper.className = "max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-8";
+    
+    // Step 1: Establish Upper Command Deck Slots dynamically
     shellWrapper.innerHTML = `
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <section id="admin-input-col" class="lg:col-span-1 bg-stone-900 text-white p-6 rounded-2xl border border-stone-800 shadow-xl"></section>
-        <section id="admin-display-col" class="lg:col-span-3 bg-stone-950 text-white p-6 rounded-2xl border border-stone-800 shadow-xl max-h-[350px] overflow-y-auto"></section>
+      <!-- MANAGEMENT HUB CANVASES -->
+      <div id="management-deck-row" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <section id="mgmt-ctrl-slot" class="lg:col-span-4 bg-stone-900 text-white p-6 rounded-2xl border border-stone-800 shadow-xl h-fit"></section>
+        <section id="mgmt-view-slot" class="lg:col-span-8 bg-white text-stone-900 p-6 rounded-2xl border border-stone-200 shadow-sm max-h-[400px] overflow-y-auto"></section>
       </div>
-      <div class="border-t border-stone-200 pt-4">
-        <h2 class="text-xs font-black uppercase tracking-widest text-stone-400 mb-6 flex items-center gap-2"><span class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-ping"></span> Enterprise Global Matrix View</h2>
+      
+      <!-- OPERATIONAL INFRASTRUCTURE ROWS -->
+      <div class="border-t border-stone-200 pt-6">
+        <h2 class="text-xs font-black uppercase tracking-widest text-stone-400 mb-6 flex items-center gap-2">
+          <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping"></span> Live Global Sub-System Instances
+        </h2>
         <div id="master-admin-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-8"></div>
       </div>
     `;
 
-    // Initialize Root Profile Controls First
-    const adminModule = await import('./modules/admin.js');
-    adminModule.init(document.getElementById('admin-input-col'), document.getElementById('admin-display-col'));
-    AppState.modules['admin'] = adminModule;
+    // Step 2: Dynamically load component arrays based on role profiles
+    if (AppState.role === 'admin') {
+      // Admin displays Identity Profile Controls on the Command Deck
+      const adminModule = await import('./modules/admin.js');
+      adminModule.init(document.getElementById('mgmt-ctrl-slot'), document.getElementById('mgmt-view-slot'));
+      AppState.modules['admin'] = adminModule;
+    } else {
+      // Executives and Operations view reports and financial matrices directly on the Command Deck
+      const reportsModule = await import('./modules/reports.js');
+      reportsModule.init(document.getElementById('mgmt-ctrl-slot'), document.getElementById('mgmt-view-slot'));
+      AppState.modules['reports'] = reportsModule;
+    }
 
-    // Direct Lazy-Loader Loop over all apps
-    const operationalApps = ['bi', 'reception', 'housekeeping', 'maintenance', 'purchasing', 'accounting', 'sales', 'reservations'];
+    // Step 3: Loop and inject every functional application module live into the lower grid
+    const monitoringApps = ['bi', 'reception', 'housekeeping', 'maintenance', 'purchasing', 'accounting', 'sales', 'reservations'];
     const gridElement = document.getElementById('master-admin-grid');
 
-    for (const app of operationalApps) {
+    for (const app of monitoringApps) {
       const widget = document.createElement('div');
       widget.className = "bg-white p-6 rounded-2xl border border-stone-200/90 shadow-xs space-y-4";
       widget.innerHTML = `
-        <div class="flex justify-between items-center border-b border-stone-100 pb-2"><h4 class="text-xs font-black uppercase tracking-wider text-stone-400">Node Framework Instance: ${app}</h4><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span></div>
+        <div class="flex justify-between items-center border-b border-stone-100 pb-2">
+          <h4 class="text-xs font-black uppercase tracking-wider text-stone-400">Application Node Module: ${app}</h4>
+          <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-xs"></span>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div id="${app}-input-slot" class="md:col-span-1"></div>
-          <div id="${app}-display-slot" class="md:col-span-2 max-h-[380px] overflow-y-auto pr-1"></div>
+          <div id="${app}-display-slot" class="md:col-span-2 max-h-[350px] overflow-y-auto pr-1"></div>
         </div>
       `;
       gridElement.appendChild(widget);
 
       try {
-        const mod = await import(`./modules/${app}.js`);
-        mod.init(document.getElementById(`${app}-input-slot`), document.getElementById(`${app}-display-slot`));
-        AppState.modules[app] = mod;
-      } catch (e) { console.error(`Component mapping error on allocation pointer: ${app}`, e); }
+        const component = await import(`./modules/${app}.js`);
+        component.init(document.getElementById(`${app}-input-slot`), document.getElementById(`${app}-display-slot`));
+        AppState.modules[app] = component;
+      } catch (err) { console.error(`Component mapping execution breakdown on frame: ${app}`, err); }
     }
+
   } else {
+    // STANDARD ACCOUNT INTERFACES: Direct single-view fallback framework mapping
     try {
       const standardModule = await import(`./modules/${AppState.role}.js`);
-      AppState.modules[AppState.role] = standardModule; standardModule.init(inputTarget, displayTarget);
-    } catch (e) { showToast("Initialization runtime link failure.", "error"); }
+      AppState.modules[AppState.role] = standardModule; 
+      standardModule.init(inputTarget, displayTarget);
+    } catch (e) { showToast("Initialization runtime failure.", "error"); }
   }
 }
 

@@ -20,11 +20,10 @@ if (!MONGODB_URI) {
 }
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('🚀 MongoDB Cluster Connection Active with Advanced Audit Logging'))
+  .then(() => console.log('🚀 MongoDB Cluster Active with Automated 2-Day FIFO Maintenance'))
   .catch(err => console.error('❌ MongoDB Connection Failure:', err));
 
 // --- DATA SCHEMAS WITH EXPLICIT TRANSACTION & TIMESTAMPS ---
-
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true }, 
@@ -112,7 +111,7 @@ function authenticateToken(req, res, next) {
 function verifyHighTierClearance(req, res, next) {
   const permitted = ['admin', 'executive', 'operations'];
   if (!permitted.includes(req.user.role)) {
-    return res.status(403).json({ error: 'Access Denied: Requires Executive, Operations, or Admin clearance profile.' });
+    return res.status(403).json({ error: 'Access Denied: Requires higher profile role.' });
   }
   next();
 }
@@ -148,29 +147,35 @@ app.get('/api/bi/analytics', authenticateToken, verifyHighTierClearance, async (
   } catch (err) { res.status(500).json({ error: 'BI matrix execution fault.' }); }
 });
 
-// --- 🧾 UNIFIED CROSS-DEPARTMENT AUDIT REPORT ENGINE ---
+// --- 🧾 UNIFIED CROSS-DEPARTMENT AUDIT REPORT ENGINE (WITH 1-MONTH RESTRAINT) ---
 app.get('/api/reports/compiled', authenticateToken, verifyHighTierClearance, async (req, res) => {
   try {
     const { department } = req.query;
+    
+    // Enforce 1-month retention lookup constraint parameter globally
+    const retentionLimit = new Date();
+    retentionLimit.setMonth(retentionLimit.getMonth() - 1);
+
     let reportData = [];
+    const dateQuery = { timestamp: { $gte: retentionLimit } };
 
     switch (department) {
       case 'reception':
       case 'housekeeping':
       case 'maintenance':
-        reportData = await Request.find().sort({ timestamp: -1 }).lean();
+        reportData = await Request.find(dateQuery).sort({ timestamp: -1 }).lean();
         break;
       case 'purchasing':
-        reportData = await InventoryOrder.find().sort({ timestamp: -1 }).lean();
+        reportData = await InventoryOrder.find(dateQuery).sort({ timestamp: -1 }).lean();
         break;
       case 'accounting':
-        reportData = await Dispute.find().sort({ timestamp: -1 }).lean();
+        reportData = await Dispute.find(dateQuery).sort({ timestamp: -1 }).lean();
         break;
       case 'sales':
-        reportData = await Lead.find().sort({ timestamp: -1 }).lean();
+        reportData = await Lead.find(dateQuery).sort({ timestamp: -1 }).lean();
         break;
       case 'reservations':
-        reportData = await Reservation.find().sort({ timestamp: -1 }).lean();
+        reportData = await Reservation.find(dateQuery).sort({ timestamp: -1 }).lean();
         break;
       default:
         return res.status(400).json({ error: 'Invalid department specifier query.' });
@@ -181,7 +186,7 @@ app.get('/api/reports/compiled', authenticateToken, verifyHighTierClearance, asy
   }
 });
 
-// --- 👑 SYSTEM ADMINISTRATION: ADVANCED CONTROL LAYER ---
+// --- 👑 SYSTEM ADMINISTRATION ---
 app.get('/api/admin/users', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Clearance denied.' });
   try { res.json(await User.find({}, 'username role password').sort({ username: 1 })); } catch (e) { res.status(500).json(e); }
@@ -192,7 +197,7 @@ app.post('/api/admin/users', authenticateToken, async (req, res) => {
   try {
     const profile = new User({ username: req.body.username, password: req.body.password, role: req.body.role });
     await profile.save(); res.status(201).json({ message: 'Identity initialized.' });
-  } catch (e) { res.status(400).json({ error: 'Account handle exists on database register indices.' }); }
+  } catch (e) { res.status(400).json({ error: 'Account handle exists.' }); }
 });
 
 app.put('/api/admin/users/:id', authenticateToken, async (req, res) => {
@@ -201,10 +206,9 @@ app.put('/api/admin/users/:id', authenticateToken, async (req, res) => {
     const { password, role } = req.body;
     const targetUser = await User.findById(req.params.id);
     if (targetUser && targetUser.username.toLowerCase() === req.user.username.toLowerCase() && role !== 'admin') {
-      return res.status(400).json({ error: 'Protection Fault: You cannot strip your own profile of administrative authority.' });
+      return res.status(400).json({ error: 'Protection Fault: administrative modification blocked.' });
     }
     const updatedUser = await User.findByIdAndUpdate(req.params.id, { password, role }, { new: true, runValidators: true });
-    if (!updatedUser) return res.status(404).json({ error: 'Target identity not found.' });
     res.json({ message: 'Identity credentials modified successfully.', user: updatedUser });
   } catch (err) { res.status(500).json({ error: 'Database mutation failure.' }); }
 });
@@ -213,39 +217,66 @@ app.delete('/api/admin/users/:id', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'System account deletions require root authority.' });
   try {
     const targetUser = await User.findById(req.params.id);
-    if (!targetUser) return res.status(404).json({ error: 'Identity record missing.' });
     if (targetUser.username.toLowerCase() === req.user.username.toLowerCase()) {
-      return res.status(400).json({ error: 'Protection Fault: Terminal deletion of active login session profile is blocked.' });
+      return res.status(400).json({ error: 'Protection Fault: Active session deletion blocked.' });
     }
     await User.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Identity removed from registry records permanently.' });
+    res.json({ message: 'Identity removed permanently.' });
   } catch (err) { res.status(500).json({ error: 'Database record removal failure.' }); }
 });
 
-// --- 🛎️ WORK DISPATCH QUEUES (WITH ADVANCED DATE-RANGE REPORT FILTERING) ---
+// --- 🛎️ WORK DISPATCH QUEUES (FIFO ACTIVE RETENTION FILTER ENGINE) ---
+
+// UI Dashboard Stream: Implements the 2-day FIFO cleanup logic for active queues
 app.get('/api/requests/today', authenticateToken, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
 
-    // If specific dates are requested, build a targeted chronological boundary report
+    // Date Report Filtering Gate: Allows historical context queries up to 1 month back
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999); // Include all records up to the absolute end of that day
+      end.setHours(23, 59, 59, 999);
 
-      const rangeReport = await Request.find({
-        timestamp: { $gte: start, $lte: end }
-      }).sort({ timestamp: -1 });
-      
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+      if (start < oneMonthAgo) {
+        return res.status(400).json({ error: "Retention Block: Archival logs are restricted to a 1-month retrieval history lookup limit." });
+      }
+
+      const rangeReport = await Request.find({ timestamp: { $gte: start, $lte: end } }).sort({ timestamp: -1 });
       return res.json(rangeReport);
     }
 
-    // Default Fallback behavior: Stream standard 24-hour sliding window dashboard data
-    const limit = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    res.json(await Request.find({ $or: [{ timestamp: { $gte: limit } }, { status: 'pending' }] }).sort({ timestamp: -1 }));
+    // 2-Day FIFO Dashboard Cleaner Logic: Hides resolved tasks older than 48 hours
+    const rollingCleanLimit = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); 
+    
+    const activeDashboardRecords = await Request.find({
+      $or: [
+        { status: 'pending' }, 
+        { status: 'completed', completedAt: { $gte: rollingCleanLimit } }
+      ]
+    }).sort({ timestamp: -1 });
+
+    res.json(activeDashboardRecords);
   } catch (err) { 
-    res.status(500).json({ error: 'Failed to crawl documents or compile date range report.' }); 
+    res.status(500).json({ error: 'Failed to crawl documents or compute FIFO timeline.' }); 
   }
+});
+
+app.post('/api/requests', authenticateToken, async (req, res) => {
+  try {
+    const doc = new Request({ ...req.body, createdBy: req.user.username });
+    await doc.save(); io.emit('new_request', doc); res.status(201).json(doc);
+  } catch (err) { res.status(400).json({ error: 'Parsing runtime defect.' }); }
+});
+
+app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
+  try {
+    const doc = await Request.findByIdAndUpdate(req.params.id, { status: 'completed', completedAt: new Date(), completedBy: req.user.username }, { new: true });
+    io.emit('request_completed', doc); res.json(doc);
+  } catch (err) { res.status(500).json({ error: 'Patch trace fault.' }); }
 });
 
 // --- 📦 PURCHASING ---

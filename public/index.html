@@ -58,44 +58,22 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       
       <div id="form-panel" class="hidden lg:col-span-1 bg-white p-6 rounded-xl border border-stone-200 h-fit">
-        <h3 class="text-lg font-bold mb-4 text-stone-800">New Request Dispatch</h3>
+        <h3 id="form-panel-title" class="text-lg font-bold mb-4 text-stone-800">New Request Dispatch</h3>
         
         <form id="request-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
           <div>
             <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Room Number</label>
             <input type="text" id="room_number" required placeholder="e.g., 304" class="w-full p-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm">
           </div>
-          <div>
+          
+          <div id="guest-field-container">
             <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Guest Name</label>
-            <input type="text" id="guest_name" required placeholder="e.g., Mr. Smith" class="w-full p-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm">
+            <input type="text" id="guest_name" placeholder="e.g., Mr. Smith" class="w-full p-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm">
           </div>
+          
           <div>
             <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Task Category</label>
-            <select id="issue_category" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm">
-              <optgroup label="🧹 HOUSEKEEPING DEPT">
-                <option value="In-house Room Cleaning">In-house Room Cleaning</option>
-                <option value="Room Check-out">Room Check-out</option>
-                <option value="add-Extra Bed">add-Extra Bed</option>
-                <option value="add Baby-Crib ">add Baby-Crib </option>
-                <option value="Extra Bath Towel">Extra Bath Towel</option>
-                <option value="Extra Hand Towel">Extra Hand Towel</option>
-                <option value="add Shampoo">add Shampoo</option>
-                <option value="add Shower Gel">add Shower Gel</option>
-              </optgroup>
-              <optgroup label="🛠️ MAINTENANCE ENGINEERING DEPT">
-                <option value="AC-Checkup">AC-Checkup</option>
-                <option value="Kettle is not working">Kettle is not working</option>
-                <option value="sink">sink</option>
-                <option value="water leakage ">water leakage </option>
-                <option value="Lighting">Lighting</option>
-                <option value="fridge ">fridge </option>
-                <option value="shower">shower</option>
-                <option value="safety-box is not working">safety-box is not working</option>
-                <option value="Safety-box reset">Safety-box reset</option>
-                <option value="Door is not opened">Door is not opened</option>
-                <option value="internet is not working">internet is not working</option>
-              </optgroup>
-            </select>
+            <select id="issue_category" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm"></select>
           </div>
           <div>
             <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Notes / Remarks</label>
@@ -157,7 +135,7 @@
           <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-stone-100 pb-4">
             <div>
               <h3 class="text-lg font-black text-stone-800">Comprehensive Shift Logs</h3>
-              <p class="text-xs text-stone-500">Query your database registry to generate full historical logs with employee signatures.</p>
+              <p class="text-xs text-stone-500">Query database registry to generate full logs with employee signatures.</p>
             </div>
             <div class="flex items-center gap-2 self-start sm:self-auto">
               <input type="date" id="report-date" class="p-2 border border-stone-300 rounded-lg text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500">
@@ -222,6 +200,12 @@
       "add Shampoo", "add Shower Gel"
     ];
 
+    const maintenanceTasks = [
+      "AC-Checkup", "Kettle is not working", "sink", "water leakage ", 
+      "Lighting", "fridge ", "shower", "safety-box is not working", 
+      "Safety-box reset", "Door is not opened", "internet is not working"
+    ];
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
     }
@@ -262,6 +246,7 @@
       } catch (err) { alert(err.message); }
     }
 
+    // 🌟 Adaptive Dashboard Renderer (Configures Housekeeping input access)
     function activateSessionDashboard() {
       document.getElementById('screen-login').classList.add('hidden');
       document.getElementById('app-container').classList.remove('hidden');
@@ -269,6 +254,9 @@
       
       const titleEl = document.getElementById('dashboard-title');
       const formPanel = document.getElementById('form-panel');
+      const formTitle = document.getElementById('form-panel-title');
+      const guestContainer = document.getElementById('guest-field-container');
+      const categorySelect = document.getElementById('issue_category');
       const mainContentPanel = document.getElementById('main-content-panel');
       const adminPanelBox = document.getElementById('admin-user-box');
       const reportsPanelBox = document.getElementById('reports-panel-box');
@@ -276,24 +264,51 @@
       formPanel.classList.add('hidden');
       adminPanelBox.classList.add('hidden');
       reportsPanelBox.classList.add('hidden');
+      guestContainer.classList.remove('hidden');
+      document.getElementById('guest_name').required = true;
       mainContentPanel.className = "lg:col-span-3 space-y-6";
 
-      if (currentRole === 'admin') {
-        titleEl.innerText = "👑 System Master Control";
-        formPanel.classList.remove('hidden');
-        adminPanelBox.classList.remove('hidden');
-        reportsPanelBox.classList.remove('hidden');
-        mainContentPanel.className = "lg:col-span-2 space-y-6";
-        pullAdminUserRoster();
-      } else if (currentRole === 'reception') {
-        titleEl.innerText = "🛎️ Receptionist Desk Management";
+      // Rebuild Dynamic Options
+      categorySelect.innerHTML = '';
+
+      if (currentRole === 'admin' || currentRole === 'reception') {
         formPanel.classList.remove('hidden');
         reportsPanelBox.classList.remove('hidden');
         mainContentPanel.className = "lg:col-span-2 space-y-6";
+        formTitle.innerText = "New Request Dispatch";
+        
+        if (currentRole === 'admin') {
+          titleEl.innerText = "👑 System Master Control";
+          adminPanelBox.classList.remove('hidden');
+          pullAdminUserRoster();
+        } else {
+          titleEl.innerText = "🛎️ Receptionist Desk Management";
+        }
+
+        // Full Access Dropdown setup
+        let hkGroup = document.createElement('optgroup'); hkGroup.label = "🧹 HOUSEKEEPING DEPT";
+        housekeepingTasks.forEach(t => hkGroup.appendChild(new Option(t, t)));
+        let maintGroup = document.createElement('optgroup'); maintGroup.label = "🛠️ MAINTENANCE ENGINEERING DEPT";
+        maintenanceTasks.forEach(t => maintGroup.appendChild(new Option(t, t)));
+        categorySelect.appendChild(hkGroup);
+        categorySelect.appendChild(maintGroup);
+
       } else if (currentRole === 'maintenance') {
         titleEl.innerText = "🛠️ Engineering Task Operations Line";
       } else if (currentRole === 'housekeeping') {
         titleEl.innerText = "🧹 Housekeeping Supervisor Terminal";
+        
+        // 🌟 Turn on dispatch panel for Housekeeping!
+        formPanel.classList.remove('hidden');
+        mainContentPanel.className = "lg:col-span-2 space-y-6";
+        formTitle.innerText = "Report Room Defect";
+        
+        // Housekeepers don't look up guest names when spotting issues
+        guestContainer.classList.add('hidden');
+        document.getElementById('guest_name').required = false; 
+
+        // Restrict dropdown list completely to engineering tasks
+        maintenanceTasks.forEach(t => categorySelect.appendChild(new Option(t, t)));
       }
 
       document.getElementById('queue-header-title').innerText = `Live Queue Matrix — ${currentRole.toUpperCase()}`;
@@ -398,11 +413,19 @@
       } catch (err) { console.error(err); }
     }
 
+    // 🌟 Adaptive Dispatch Submit Function
     async function handleFormSubmit(event) {
       event.preventDefault();
+      
+      // Auto-populate guest name field to "In-House Room Asset" if housekeeper leaves blank
+      let nameField = document.getElementById('guest_name').value.trim();
+      if (currentRole === 'housekeeping' && !nameField) {
+        nameField = "Occupied/In-House Asset Check";
+      }
+
       const requestData = {
         room_number: document.getElementById('room_number').value.trim(),
-        guest_name: document.getElementById('guest_name').value.trim(),
+        guest_name: nameField,
         issue_category: document.getElementById('issue_category').value,
         notes: document.getElementById('notes').value.trim()
       };
@@ -414,6 +437,7 @@
         });
         if (!response.ok) throw new Error("Verification rejection.");
         document.getElementById('request-form').reset();
+        alert("Defect logged. Routed directly to Maintenance Engineers.");
       } catch (err) { alert(err.message); }
     }
 
@@ -473,7 +497,6 @@
       });
     }
 
-    // 📊 🌟 UPGRADED LEDGER AUDIT GENERATOR BY TARGET DATE
     async function fetchHistoricalReport() {
       const dateVal = document.getElementById('report-date').value;
       if (!dateVal) { alert("Please pinpoint a calendar date."); return; }
@@ -489,14 +512,12 @@
         if (!response.ok) throw new Error("Could not extract database records.");
         const data = await response.json();
         
-        // 1. Calculate Analytics Values
         document.getElementById('stat-total').innerText = data.metrics.total;
         document.getElementById('stat-fixed').innerText = data.metrics.fixed;
         document.getElementById('stat-pending').innerText = data.metrics.pending;
         
         let aggregateMinutes = 0;
         let finishedCount = 0;
-
         tbody.innerHTML = '';
 
         if (data.requests.length === 0) {
@@ -505,7 +526,6 @@
           return;
         }
 
-        // 2. Loop & Construct Table Rows
         data.requests.forEach(req => {
           const createdTime = new Date(req.timestamp);
           const formattedStamp = createdTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -518,7 +538,6 @@
             
             aggregateMinutes += deltaMins;
             finishedCount++;
-            
             durationString = deltaMins < 60 ? `${deltaMins}m` : `${Math.floor(deltaMins / 60)}h ${deltaMins % 60}m`;
           }
 
@@ -543,7 +562,6 @@
           tbody.appendChild(tr);
         });
 
-        // 3. Render Average Fix Speed Metrics
         if (finishedCount > 0) {
           const avg = Math.round(aggregateMinutes / finishedCount);
           document.getElementById('stat-speed').innerText = avg < 60 ? `${avg} Mins` : `${Math.floor(avg / 60)}h ${avg % 60}m`;

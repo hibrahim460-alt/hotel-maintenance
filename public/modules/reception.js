@@ -9,6 +9,7 @@ export function init(formElement, viewElement) {
 }
 
 function renderWorkspaceLayout() {
+  // PANEL A: Input Controls Container (With completely restored and expanded dropdown task types)
   formContainer.innerHTML = `
     <div class="space-y-5 text-stone-900">
       <div>
@@ -16,6 +17,7 @@ function renderWorkspaceLayout() {
         <p class="text-[10px] text-stone-400 mt-0.5 leading-tight">Create work requests or pull isolated historical logs below.</p>
       </div>
       
+      <!-- LOG TASK DISPATCH FORM -->
       <form id="fo-task-form" class="space-y-2 bg-stone-50 p-3 rounded-xl border border-stone-200 shadow-xs">
         <span class="text-[9px] uppercase font-black tracking-wider text-stone-400 block mb-1">New Task Dispatch</span>
         <div>
@@ -25,21 +27,51 @@ function renderWorkspaceLayout() {
           <input type="text" id="fo_guest" required placeholder="Guest Surname" class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:border-indigo-500">
         </div>
         <div>
-          <select id="fo_category" class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none">
-            <option value="Front Desk">🛎️ Front Desk Service</option>
-            <option value="Housekeeping">🧹 Housekeeping Dispatch</option>
-            <option value="Maintenance">🛠️ Engineering Repair</option>
-            <option value="Room Service">🍽️ Room Service Delivery</option>
+          <label class="block text-[8px] uppercase tracking-wider font-bold text-stone-400 mb-1">Select Task Category / Assignment Target</label>
+          <select id="fo_category" class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <!-- 🛠️ ENGINEERING & MAINTENANCE TEAM TASKS -->
+            <optgroup label="🛠️ Engineering & Maintenance">
+              <option value="Maintenance">General Engineering Repair</option>
+              <option value="Maintenance">AC / HVAC Air Conditioning Malfunction</option>
+              <option value="Maintenance">Plumbing / Leak / Drainage Issue</option>
+              <option value="Maintenance">Electrical / Lighting / Power Outage</option>
+              <option value="Maintenance">TV / Wi-Fi Network / Connectivity Tech</option>
+              <option value="Maintenance">Door Lock / Keycard Reader Fix</option>
+            </optgroup>
+            
+            <!-- 🧹 HOUSEKEEPING TEAM TASKS -->
+            <optgroup label="🧹 Housekeeping Operations">
+              <option value="Housekeeping">Full Room Cleaning Dispatch</option>
+              <option value="Housekeeping">Fresh Linen / Pillow / Towel Delivery</option>
+              <option value="Housekeeping">Bathroom Amenities Re-stock</option>
+              <option value="Housekeeping">Turn-down Service Delivery</option>
+              <option value="Housekeeping">Minibar Inspection & Refill</option>
+            </optgroup>
+
+            <!-- 🛎️ FRONT DESK & GUEST SERVICE TASKS -->
+            <optgroup label="🛎️ Front Office & Concierge">
+              <option value="Front Desk">Front Desk Service Dispatch</option>
+              <option value="Front Desk">Luggage Assistance / Bellboy Request</option>
+              <option value="Front Desk">Guest Wake-Up Call Setup</option>
+              <option value="Front Desk">Taxi / Transportation Arrangement</option>
+            </optgroup>
+
+            <!-- 🍽️ F&B ROOM SERVICE DELIVERY -->
+            <optgroup label="🍽️ Food & Beverage Room Service">
+              <option value="Room Service">In-Room Dining Order Delivery</option>
+              <option value="Room Service">Clear Used Dining Plates / Trays</option>
+            </optgroup>
           </select>
         </div>
         <div>
-          <textarea id="fo_notes" rows="1" placeholder="Task details/notes..." class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:border-indigo-500"></textarea>
+          <textarea id="fo_notes" rows="2" placeholder="Write explicit breakdown notes here (e.g., AC leaking water, broken lightbulb)..." class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:border-indigo-500"></textarea>
         </div>
         <button type="submit" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-wider rounded-lg transition-all">
           Dispatch Live Task
         </button>
       </form>
 
+      <!-- ADVANCED DATE REPORT FILTER GENERATOR -->
       <div class="bg-stone-900 text-white p-3 rounded-xl space-y-2 border border-stone-800 shadow-sm">
         <span class="text-[9px] uppercase font-black tracking-wider text-indigo-400 block">📊 1-Month Archival Vault</span>
         <div class="grid grid-cols-2 gap-2">
@@ -66,6 +98,7 @@ function renderWorkspaceLayout() {
 
   viewContainer.innerHTML = `
     <div class="space-y-6">
+      <!-- MAIN QUEUE PANEL: DISPLAYS THE CURRENT 48-HOUR TIMELINE ONLY -->
       <div class="space-y-2">
         <div class="flex justify-between items-center border-b border-stone-200 pb-1.5">
           <h4 class="text-stone-500 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
@@ -76,6 +109,7 @@ function renderWorkspaceLayout() {
         <div id="fo-live-queue-target" class="space-y-2 max-h-[300px] overflow-y-auto pr-1"></div>
       </div>
 
+      <!-- VISUAL CONTAINER FOR THE SEPARATE 1-MONTH ARCHIVAL LOG REPORT -->
       <div id="fo-report-vault-container" class="space-y-2 border-t border-stone-200 pt-4 hidden">
         <div class="flex justify-between items-center border-b border-stone-200 pb-1.5">
           <h4 id="fo-report-vault-title" class="text-indigo-600 text-xs font-black uppercase tracking-wider">
@@ -246,7 +280,10 @@ async function handleTaskSubmit(e) {
   e.preventDefault();
   const room_number = document.getElementById('fo_room').value.trim();
   const guest_name = document.getElementById('fo_guest').value.trim();
-  const issue_category = document.getElementById('fo_category').value;
+  
+  // Gets selected index label option instead of the internal DB classification value for verbose printing
+  const categorySelect = document.getElementById('fo_category');
+  const issue_category = categorySelect.options[categorySelect.selectedIndex].text;
   const notes = document.getElementById('fo_notes').value.trim();
 
   try {

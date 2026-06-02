@@ -11,49 +11,48 @@
 </head>
 <body class="bg-stone-100 text-stone-900 font-sans min-h-screen">
 
-  <div id="screen-role-select" class="max-w-4xl mx-auto px-6 py-16 text-center">
-    
-    <div id="install-container" class="hidden mb-8 max-w-md mx-auto p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between shadow-xs">
-      <div class="text-left">
+  <div id="install-container" class="hidden max-w-7xl mx-auto mt-4 px-4">
+    <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between shadow-xs">
+      <div>
         <p class="text-sm font-bold text-stone-800">Access Workspace Faster</p>
-        <p class="text-xs text-stone-500">Add WH App to your Home Screen</p>
+        <p class="text-xs text-stone-500">Add WH App directly onto your mobile homescreen</p>
       </div>
-      <button id="btn-install" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg transition shadow-xs">
-        📲 Install App
-      </button>
+      <button id="btn-install" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg transition shadow-xs">📲 Install App</button>
     </div>
+  </div>
 
-    <h1 class="text-4xl font-extrabold mb-4 text-stone-800">WH Hotel Workspace</h1>
-    <p class="text-stone-600 mb-12">Select your operational interface to interact with real-time pipelines.</p>
-    
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <button onclick="switchRole('reception')" class="p-8 bg-white rounded-2xl shadow-sm border border-stone-200 transition text-center group hover:shadow-md">
-        <div class="text-4xl mb-3 group-hover:scale-110 transition-transform">🛎️</div>
-        <div class="font-bold text-xl text-stone-800">Reception Desk</div>
-        <p class="text-xs text-stone-500 mt-2">Log requests & access history logs</p>
-      </button>
-
-      <button onclick="switchRole('maintenance')" class="p-8 bg-white rounded-2xl shadow-sm border border-stone-200 transition text-center group hover:shadow-md">
-        <div class="text-4xl mb-3 group-hover:scale-110 transition-transform">🛠️</div>
-        <div class="font-bold text-xl text-stone-800">Maintenance Eng.</div>
-        <p class="text-xs text-stone-500 mt-2">View and resolve technical repairs</p>
-      </button>
-
-      <button onclick="switchRole('housekeeping')" class="p-8 bg-white rounded-2xl shadow-sm border border-stone-200 transition text-center group hover:shadow-md">
-        <div class="text-4xl mb-3 group-hover:scale-110 transition-transform">🧹</div>
-        <div class="font-bold text-xl text-stone-800">Housekeeping</div>
-        <p class="text-xs text-stone-500 mt-2">Manage room cleaning & amenities</p>
-      </button>
+  <div id="screen-login" class="max-w-md mx-auto px-6 py-28">
+    <div class="bg-white p-8 rounded-2xl border border-stone-200 shadow-md">
+      <div class="text-center mb-6">
+        <span class="text-4xl">🏢</span>
+        <h2 class="text-2xl font-black mt-2 text-stone-800">WH Hotel System</h2>
+        <p class="text-xs text-stone-500 mt-1">Provide secure staff credentials to link device</p>
+      </div>
+      
+      <form onsubmit="handleLoginRequest(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Username ID</label>
+          <input type="text" id="login-user" required placeholder="e.g., rc_agent1" class="w-full p-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-500 focus:outline-none text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Security Password</label>
+          <input type="password" id="login-pass" required placeholder="••••••••" class="w-full p-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-stone-500 focus:outline-none text-sm">
+        </div>
+        <button type="submit" id="login-btn" class="w-full py-3 bg-stone-800 hover:bg-stone-900 text-white font-bold rounded-lg transition text-sm tracking-wide shadow-sm">Authorize Device</button>
+      </form>
     </div>
   </div>
 
   <div id="app-container" class="hidden max-w-7xl mx-auto px-4 py-6">
     <header class="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm mb-6 border border-stone-200 gap-4">
       <div class="flex items-center gap-4">
-        <button onclick="location.reload()" class="px-3 py-1.5 bg-stone-200 hover:bg-stone-300 rounded-md text-sm font-semibold transition">← Back</button>
-        <h2 id="dashboard-title" class="text-2xl font-bold text-stone-800">Department Dashboard</h2>
+        <h2 id="dashboard-title" class="text-xl font-bold text-stone-800">Operational Dashboard</h2>
+        <span id="user-badge" class="px-2 py-0.5 text-xs font-semibold bg-stone-100 text-stone-600 rounded border border-stone-200"></span>
       </div>
-      <span class="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 animate-pulse">● LIVE PIPELINE SYNC</span>
+      <div class="flex items-center gap-3">
+        <span class="hidden sm:inline-flex px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 animate-pulse">● LIVE PIPELINE</span>
+        <button onclick="logoutSession()" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-md text-xs font-bold transition">🔒 Disconnect</button>
+      </div>
     </header>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -64,17 +63,15 @@
         <form id="request-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
           <div>
             <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Room Number</label>
-            <input type="text" id="room_number" required placeholder="e.g., 304" class="w-full p-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <input type="text" id="room_number" required placeholder="e.g., 304" class="w-full p-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm">
           </div>
-
           <div>
             <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Guest Name</label>
-            <input type="text" id="guest_name" required placeholder="e.g., Mr. Smith" class="w-full p-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <input type="text" id="guest_name" required placeholder="e.g., Mr. Smith" class="w-full p-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm">
           </div>
-
           <div>
             <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Task Category</label>
-            <select id="issue_category" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
+            <select id="issue_category" required class="w-full p-2.5 border border-stone-300 rounded-lg bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm">
               <optgroup label="🧹 HOUSEKEEPING DEPT">
                 <option value="In-house Room Cleaning">In-house Room Cleaning</option>
                 <option value="Room Check-out">Room Check-out</option>
@@ -85,7 +82,6 @@
                 <option value="add Shampoo">add Shampoo</option>
                 <option value="add Shower Gel">add Shower Gel</option>
               </optgroup>
-              
               <optgroup label="🛠️ MAINTENANCE ENGINEERING DEPT">
                 <option value="AC-Checkup">AC-Checkup</option>
                 <option value="Kettle is not working">Kettle is not working</option>
@@ -101,13 +97,11 @@
               </optgroup>
             </select>
           </div>
-
           <div>
             <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Notes / Remarks</label>
-            <textarea id="notes" rows="2" placeholder="Details..." class="w-full p-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none"></textarea>
+            <textarea id="notes" rows="2" placeholder="Details..." class="w-full p-2.5 border border-stone-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm"></textarea>
           </div>
-
-          <button type="submit" id="submit-btn" class="w-full py-3 bg-stone-800 text-white font-bold rounded-lg hover:bg-stone-900 transition">Dispatch Request</button>
+          <button type="submit" id="submit-btn" class="w-full py-3 bg-stone-800 text-white font-bold rounded-lg hover:bg-stone-900 transition text-sm">Dispatch Request</button>
         </form>
 
         <div class="mt-8 pt-6 border-t border-stone-200">
@@ -120,17 +114,46 @@
         </div>
       </div>
 
-      <div id="pipeline-panel" class="lg:col-span-2 bg-white p-6 rounded-xl border border-stone-200">
-        <h3 class="text-lg font-bold mb-4 text-stone-800">Active Queue Pipeline</h3>
-        <div id="queue-container" class="space-y-3"></div>
-      </div>
+      <div id="main-content-panel" class="lg:col-span-2 space-y-6">
+        
+        <div id="admin-user-box" class="hidden bg-stone-900 text-white p-6 rounded-xl border border-stone-800 shadow-lg">
+          <h3 class="text-md font-bold text-amber-400 mb-3 uppercase tracking-wider flex items-center gap-2">👑 Account Provisioning Management Panel</h3>
+          <form onsubmit="handleAccountCreation(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+            <div>
+              <label class="block text-[10px] font-bold text-stone-400 uppercase mb-1">New ID Name</label>
+              <input type="text" id="admin-new-user" required placeholder="e.g., staff_hk3" class="w-full p-2 bg-stone-800 text-white border border-stone-700 rounded text-xs focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-stone-400 uppercase mb-1">Initial Password</label>
+              <input type="password" id="admin-new-pass" required placeholder="••••" class="w-full p-2 bg-stone-800 text-white border border-stone-700 rounded text-xs focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-stone-400 uppercase mb-1">Isolated Role Department</label>
+              <select id="admin-new-role" required class="w-full p-2 bg-stone-800 text-white border border-stone-700 rounded text-xs focus:outline-none focus:border-amber-400">
+                <option value="reception">🛎️ Reception Desk</option>
+                <option value="maintenance">🛠️ Maintenance Eng.</option>
+                <option value="housekeeping">🧹 Housekeeping</option>
+              </select>
+            </div>
+            <button type="submit" class="w-full py-2 bg-amber-500 hover:bg-amber-600 text-stone-950 font-extrabold rounded text-xs transition uppercase tracking-wider">Save User Profile</button>
+          </form>
+          <div id="admin-roster-list" class="mt-4 pt-4 border-t border-stone-800 flex flex-wrap gap-2 text-[11px] text-stone-300"></div>
+        </div>
 
+        <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-xs">
+          <h3 id="queue-header-title" class="text-lg font-black text-stone-800 mb-4">Active Queue Pipeline</h3>
+          <div id="queue-container" class="space-y-3"></div>
+        </div>
+
+      </div>
     </div>
   </div>
 
   <script>
     const socket = io();
-    let currentRole = '';
+    let userToken = localStorage.getItem('token') || '';
+    let currentRole = localStorage.getItem('role') || '';
+    let usernameString = localStorage.getItem('username') || '';
     let globalRequestsArray = [];
     let deferredPrompt;
     
@@ -140,56 +163,128 @@
       "add Shampoo", "add Shower Gel"
     ];
 
-    // 📡 REGISTER PWA SERVICE WORKER FOR MOBILE INSTALL CAPABILITY
+    // PWA Mobile Installer Handlers
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(err => console.log(err));
-      });
+      window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
     }
-
-    // Capture install prompt
     window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
+      e.preventDefault(); deferredPrompt = e;
       document.getElementById('install-container').classList.remove('hidden');
     });
-
     document.getElementById('btn-install').addEventListener('click', async () => {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
+      if (!deferredPrompt) return; deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        document.getElementById('install-container').classList.add('hidden');
-      }
+      if (outcome === 'accepted') document.getElementById('install-container').classList.add('hidden');
       deferredPrompt = null;
     });
 
-    async function loadLiveQueueData() {
+    // 🔒 USER AUTHENTICATION CONTROLLER RUNTIMES
+    if (userToken) { activateSessionDashboard(); }
+
+    async function handleLoginRequest(event) {
+      event.preventDefault();
+      const payload = {
+        username: document.getElementById('login-user').value.trim(),
+        password: document.getElementById('login-pass').value
+      };
       try {
-        const res = await fetch('/api/requests/today');
-        if (res.ok) { globalRequestsArray = await res.json(); renderRequestQueue(); }
-      } catch (err) { console.error("Pipeline sync failed:", err); }
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Authentication structural fault.");
+        
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.role);
+        localStorage.setItem('username', data.username);
+        
+        userToken = data.token; currentRole = data.role; usernameString = data.username;
+        activateSessionDashboard();
+      } catch (err) { alert(err.message); }
     }
 
-    function switchRole(role) {
-      currentRole = role;
-      document.getElementById('screen-role-select').classList.add('hidden');
+    function activateSessionDashboard() {
+      document.getElementById('screen-login').classList.add('hidden');
       document.getElementById('app-container').classList.remove('hidden');
+      
+      document.getElementById('user-badge').innerText = `👤 ${usernameString.toUpperCase()} (${currentRole})`;
       
       const titleEl = document.getElementById('dashboard-title');
       const formPanel = document.getElementById('form-panel');
-      const pipelinePanel = document.getElementById('pipeline-panel');
+      const mainContentPanel = document.getElementById('main-content-panel');
+      const adminPanelBox = document.getElementById('admin-user-box');
 
-      if (role === 'reception') {
-        titleEl.innerText = "🛎️ Front Desk Reception Workspace";
+      // RESET VIEW HIDDEN FIELDS BASED ON EXACT ROLE MATCHES
+      formPanel.classList.add('hidden');
+      adminPanelBox.classList.add('hidden');
+      mainContentPanel.className = "lg:col-span-3 space-y-6";
+
+      if (currentRole === 'admin') {
+        titleEl.innerText = "👑 System Master Control";
         formPanel.classList.remove('hidden');
-        pipelinePanel.className = "lg:col-span-2 bg-white p-6 rounded-xl border border-stone-200";
-      } else {
-        titleEl.innerText = role === 'maintenance' ? "🛠️ Maintenance Dashboard" : "🧹 Housekeeping Control";
-        formPanel.classList.add('hidden');
-        pipelinePanel.className = "lg:col-span-3 bg-white p-6 rounded-xl border border-stone-200";
+        adminPanelBox.classList.remove('hidden');
+        mainContentPanel.className = "lg:col-span-2 space-y-6";
+        pullAdminUserRoster();
+      } else if (currentRole === 'reception') {
+        titleEl.innerText = "🛎️ Receptionist Desk Management";
+        formPanel.classList.remove('hidden');
+        mainContentPanel.className = "lg:col-span-2 space-y-6";
+      } else if (currentRole === 'maintenance') {
+        titleEl.innerText = "🛠️ Engineering Task Operations Line";
+      } else if (currentRole === 'housekeeping') {
+        titleEl.innerText = "🧹 Housekeeping Supervisor Terminal";
       }
+
+      document.getElementById('queue-header-title').innerText = `Live Queue Matrix — ${currentRole.toUpperCase()}`;
       loadLiveQueueData();
+    }
+
+    function logoutSession() {
+      localStorage.clear();
+      location.reload();
+    }
+
+    // 🚀 ADMIN USER ACCOUNT PROVISION FORM ENGINE
+    async function handleAccountCreation(event) {
+      event.preventDefault();
+      const payload = {
+        username: document.getElementById('admin-new-user').value.trim(),
+        password: document.getElementById('admin-new-pass').value,
+        role: document.getElementById('admin-new-role').value
+      };
+      try {
+        const res = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        alert(data.message);
+        document.getElementById('admin-new-user').value = '';
+        document.getElementById('admin-new-pass').value = '';
+        pullAdminUserRoster();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function pullAdminUserRoster() {
+      try {
+        const res = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${userToken}` } });
+        if (res.ok) {
+          const list = await res.json();
+          document.getElementById('admin-roster-list').innerHTML = 'Active Profiles: ' + list.map(u => `<span class="bg-stone-800 px-2 py-1 rounded border border-stone-700">${u.username} (${u.role})</span>`).join(' ');
+        }
+      } catch (e) {}
+    }
+
+    // 📡 REQUEST AND DATA INTERACTION QUEUES
+    async function loadLiveQueueData() {
+      try {
+        const res = await fetch('/api/requests/today', { headers: { 'Authorization': `Bearer ${userToken}` } });
+        if (res.ok) { globalRequestsArray = await res.json(); renderRequestQueue(); }
+      } catch (err) { console.error(err); }
     }
 
     async function handleFormSubmit(event) {
@@ -200,23 +295,24 @@
         issue_category: document.getElementById('issue_category').value,
         notes: document.getElementById('notes').value.trim()
       };
-      const submitBtn = document.getElementById('submit-btn');
-      submitBtn.disabled = true;
       try {
         const response = await fetch('/api/requests', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
           body: JSON.stringify(requestData)
         });
-        if (!response.ok) throw new Error("Validation failure.");
+        if (!response.ok) throw new Error("Verification rejection on schema parameters.");
         document.getElementById('request-form').reset();
-      } catch (err) { alert(err.message); } finally { submitBtn.disabled = false; }
+      } catch (err) { alert(err.message); }
     }
 
     async function markTaskComplete(id) {
       try {
-        const response = await fetch(`/api/requests/${id}/complete`, { method: 'PATCH' });
-        if (!response.ok) throw new Error("Failed state update.");
+        const response = await fetch(`/api/requests/${id}/complete`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+        if (!response.ok) throw new Error("Could not execute state update.");
       } catch (err) { alert(err.message); }
     }
 
@@ -225,21 +321,26 @@
       container.innerHTML = '';
       
       let filteredRequests = globalRequestsArray;
-      if (currentRole === 'maintenance') filteredRequests = globalRequestsArray.filter(req => !housekeepingTasks.includes(req.issue_category));
-      if (currentRole === 'housekeeping') filteredRequests = globalRequestsArray.filter(req => housekeepingTasks.includes(req.issue_category));
+      
+      // STRICT LAYER ISOLATION BY USER ROLE REGISTRY
+      if (currentRole === 'maintenance') {
+        filteredRequests = globalRequestsArray.filter(req => !housekeepingTasks.includes(req.issue_category));
+      } else if (currentRole === 'housekeeping') {
+        filteredRequests = globalRequestsArray.filter(req => housekeepingTasks.includes(req.issue_category));
+      } else if (currentRole === 'reception') {
+        // Reception sees both pipelines combined but cannot alter state elements
+        filteredRequests = globalRequestsArray;
+      }
 
       if (filteredRequests.length === 0) {
-        container.innerHTML = `<div class="text-center py-12 text-stone-400 font-medium">No active tasks in this department.</div>`;
+        container.innerHTML = `<div class="text-center py-12 text-stone-400 font-medium">No operational workflows found in this dashboard queue.</div>`;
         return;
       }
 
       filteredRequests.forEach(req => {
         const isHK = housekeepingTasks.includes(req.issue_category);
         const card = document.createElement('div');
-        
-        const localTime = new Date(req.timestamp).toLocaleTimeString(navigator.language, {
-          hour: '2-digit', minute: '2-digit', hour12: true
-        });
+        const localTime = new Date(req.timestamp).toLocaleTimeString(navigator.language, { hour: '2-digit', minute: '2-digit', hour12: true });
 
         card.className = `p-4 rounded-xl border transition ${req.status === 'completed' ? 'bg-stone-50 border-stone-200 opacity-60' : isHK ? 'bg-purple-50/50 border-purple-200 shadow-sm' : 'bg-amber-50/50 border-amber-200 shadow-sm'}`;
         card.innerHTML = `
@@ -269,7 +370,7 @@
       resultsContainer.innerHTML = `<p class="text-xs text-stone-400 text-center py-4 animate-pulse">Querying database registry...</p>`;
       resultsContainer.classList.remove('hidden');
       try {
-        const response = await fetch(`/api/reports?date=${dateVal}`);
+        const response = await fetch(`/api/reports?date=${dateVal}`, { headers: { 'Authorization': `Bearer ${userToken}` } });
         if (!response.ok) throw new Error("Could not pull records.");
         const data = await response.json();
         resultsContainer.innerHTML = '';

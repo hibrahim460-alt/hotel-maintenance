@@ -148,4 +148,419 @@
           </div>
         </div>
 
-        <div id="active-queue-box" class="bg-white p-6 rounded-xl border border-stone-200
+        <div id="active-queue-box" class="bg-white p-6 rounded-xl border border-stone-200 shadow-xs">
+          <h3 id="queue-header-title" class="text-lg font-black text-stone-800 mb-4">Active Queue Pipeline</h3>
+          <div id="queue-container" class="space-y-3"></div>
+        </div>
+
+        <div id="reports-panel-box" class="hidden bg-white p-6 rounded-xl border border-stone-200 shadow-xs space-y-6">
+          <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-stone-100 pb-4">
+            <div>
+              <h3 class="text-lg font-black text-stone-800">Comprehensive Shift Logs</h3>
+              <p class="text-xs text-stone-500">Query your database registry to generate full historical logs with employee signatures.</p>
+            </div>
+            <div class="flex items-center gap-2 self-start sm:self-auto">
+              <input type="date" id="report-date" class="p-2 border border-stone-300 rounded-lg text-sm bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-500">
+              <button onclick="fetchHistoricalReport()" class="px-4 py-2 bg-stone-800 hover:bg-stone-900 text-white font-bold rounded-lg text-sm transition">Generate Report</button>
+            </div>
+          </div>
+
+          <div id="report-results-pane" class="hidden space-y-6">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div class="bg-stone-50 p-3 rounded-lg border border-stone-200/60 text-center">
+                <span class="block text-xs font-bold text-stone-400 uppercase tracking-wider">Total Tickets</span>
+                <span id="stat-total" class="text-2xl font-black text-stone-800">0</span>
+              </div>
+              <div class="bg-emerald-50/60 p-3 rounded-lg border border-emerald-100 text-center">
+                <span class="block text-xs font-bold text-emerald-600/80 uppercase tracking-wider">Completed</span>
+                <span id="stat-fixed" class="text-2xl font-black text-emerald-700">0</span>
+              </div>
+              <div class="bg-amber-50/60 p-3 rounded-lg border border-amber-100 text-center">
+                <span class="block text-xs font-bold text-amber-600/80 uppercase tracking-wider">Still Pending</span>
+                <span id="stat-pending" class="text-2xl font-black text-amber-700">0</span>
+              </div>
+              <div class="bg-stone-50 p-3 rounded-lg border border-stone-200/60 text-center">
+                <span class="block text-xs font-bold text-stone-400 uppercase tracking-wider">Avg. Fix Speed</span>
+                <span id="stat-speed" class="text-lg font-bold text-stone-700 mt-1 block">--</span>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto border border-stone-200 rounded-lg">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="bg-stone-50 border-b border-stone-200 font-bold uppercase tracking-wider text-stone-600 text-[10px]">
+                    <th class="p-3">Timestamp</th>
+                    <th class="p-3">Room</th>
+                    <th class="p-3">Service Category</th>
+                    <th class="p-3">Opened By</th>
+                    <th class="p-3">Completed By</th>
+                    <th class="p-3">Duration</th>
+                    <th class="p-3 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="report-table-body" class="divide-y divide-stone-100 bg-white"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+    let userToken = localStorage.getItem('token') || '';
+    let currentRole = localStorage.getItem('role') || '';
+    let usernameString = localStorage.getItem('username') || '';
+    let globalRequestsArray = [];
+    let deferredPrompt;
+    
+    const housekeepingTasks = [
+      "In-house Room Cleaning", "Room Check-out", "add-Extra Bed", 
+      "add Baby-Crib ", "Extra Bath Towel", "Extra Hand Towel", 
+      "add Shampoo", "add Shower Gel"
+    ];
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
+    }
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault(); deferredPrompt = e;
+      document.getElementById('install-container').classList.remove('hidden');
+    });
+    document.getElementById('btn-install').addEventListener('click', async () => {
+      if (!deferredPrompt) return; deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') document.getElementById('install-container').classList.add('hidden');
+      deferredPrompt = null;
+    });
+
+    if (userToken) { activateSessionDashboard(); }
+
+    async function handleLoginRequest(event) {
+      event.preventDefault();
+      const payload = {
+        username: document.getElementById('login-user').value.trim(),
+        password: document.getElementById('login-pass').value
+      };
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Authentication fault.");
+        
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.role);
+        localStorage.setItem('username', data.username);
+        
+        userToken = data.token; currentRole = data.role; usernameString = data.username;
+        activateSessionDashboard();
+      } catch (err) { alert(err.message); }
+    }
+
+    function activateSessionDashboard() {
+      document.getElementById('screen-login').classList.add('hidden');
+      document.getElementById('app-container').classList.remove('hidden');
+      document.getElementById('user-badge').innerText = `👤 ${usernameString.toUpperCase()} (${currentRole})`;
+      
+      const titleEl = document.getElementById('dashboard-title');
+      const formPanel = document.getElementById('form-panel');
+      const mainContentPanel = document.getElementById('main-content-panel');
+      const adminPanelBox = document.getElementById('admin-user-box');
+      const reportsPanelBox = document.getElementById('reports-panel-box');
+
+      formPanel.classList.add('hidden');
+      adminPanelBox.classList.add('hidden');
+      reportsPanelBox.classList.add('hidden');
+      mainContentPanel.className = "lg:col-span-3 space-y-6";
+
+      if (currentRole === 'admin') {
+        titleEl.innerText = "👑 System Master Control";
+        formPanel.classList.remove('hidden');
+        adminPanelBox.classList.remove('hidden');
+        reportsPanelBox.classList.remove('hidden');
+        mainContentPanel.className = "lg:col-span-2 space-y-6";
+        pullAdminUserRoster();
+      } else if (currentRole === 'reception') {
+        titleEl.innerText = "🛎️ Receptionist Desk Management";
+        formPanel.classList.remove('hidden');
+        reportsPanelBox.classList.remove('hidden');
+        mainContentPanel.className = "lg:col-span-2 space-y-6";
+      } else if (currentRole === 'maintenance') {
+        titleEl.innerText = "🛠️ Engineering Task Operations Line";
+      } else if (currentRole === 'housekeeping') {
+        titleEl.innerText = "🧹 Housekeeping Supervisor Terminal";
+      }
+
+      document.getElementById('queue-header-title').innerText = `Live Queue Matrix — ${currentRole.toUpperCase()}`;
+      loadLiveQueueData();
+    }
+
+    function logoutSession() {
+      localStorage.clear();
+      location.reload();
+    }
+
+    async function handleAccountCreation(event) {
+      event.preventDefault();
+      const payload = {
+        username: document.getElementById('admin-new-user').value.trim(),
+        password: document.getElementById('admin-new-pass').value.trim(),
+        role: document.getElementById('admin-new-role').value
+      };
+      try {
+        const res = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        document.getElementById('admin-new-user').value = '';
+        document.getElementById('admin-new-pass').value = '';
+        pullAdminUserRoster();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function pullAdminUserRoster() {
+      try {
+        const res = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${userToken}` } });
+        if (!res.ok) return;
+        const list = await res.json();
+        const tbody = document.getElementById('admin-table-body');
+        tbody.innerHTML = '';
+
+        list.forEach(user => {
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-stone-800/30 transition-colors";
+          tr.innerHTML = `
+            <td class="p-2.5 font-bold font-mono text-amber-100">${user.username}</td>
+            <td class="p-2.5">
+              <input type="text" id="pw-${user._id}" value="${user.password}" class="bg-stone-800 border border-stone-700 px-2 py-1 rounded text-white focus:outline-none focus:border-amber-400 w-32 font-mono text-xs">
+            </td>
+            <td class="p-2.5">
+              <select id="role-${user._id}" class="bg-stone-800 border border-stone-700 px-2 py-1 rounded text-white focus:outline-none focus:border-amber-400 text-xs">
+                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>👑 admin</option>
+                <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>🛎️ reception</option>
+                <option value="maintenance" ${user.role === 'maintenance' ? 'selected' : ''}>🛠️ maintenance</option>
+                <option value="housekeeping" ${user.role === 'housekeeping' ? 'selected' : ''}>🧹 housekeeping</option>
+              </select>
+            </td>
+            <td class="p-2.5 text-right space-x-1 whitespace-nowrap">
+              <button onclick="updateUserAccount('${user._id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold transition text-[11px]">Save 💾</button>
+              ${user.username !== 'admin' ? `<button onclick="deleteUserAccount('${user._id}')" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-bold transition text-[11px]">Purge ❌</button>` : ''}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {}
+    }
+
+    async function updateUserAccount(id) {
+      const payload = {
+        password: document.getElementById(`pw-${id}`).value.trim(),
+        role: document.getElementById(`role-${id}`).value
+      };
+      try {
+        const res = await fetch(`/api/admin/users/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        alert("User account configurations saved successfully.");
+        pullAdminUserRoster();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function deleteUserAccount(id) {
+      if (!confirm("Are you absolutely sure you want to terminate this user?")) return;
+      try {
+        const res = await fetch(`/api/admin/users/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        pullAdminUserRoster();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function loadLiveQueueData() {
+      try {
+        const res = await fetch('/api/requests/today', { headers: { 'Authorization': `Bearer ${userToken}` } });
+        if (res.ok) { globalRequestsArray = await res.json(); renderRequestQueue(); }
+      } catch (err) { console.error(err); }
+    }
+
+    async function handleFormSubmit(event) {
+      event.preventDefault();
+      const requestData = {
+        room_number: document.getElementById('room_number').value.trim(),
+        guest_name: document.getElementById('guest_name').value.trim(),
+        issue_category: document.getElementById('issue_category').value,
+        notes: document.getElementById('notes').value.trim()
+      };
+      try {
+        const response = await fetch('/api/requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` },
+          body: JSON.stringify(requestData)
+        });
+        if (!response.ok) throw new Error("Verification rejection.");
+        document.getElementById('request-form').reset();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function markTaskComplete(id) {
+      try {
+        const response = await fetch(`/api/requests/${id}/complete`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${userToken}` }
+        });
+        if (!response.ok) throw new Error("Could not execute state update.");
+      } catch (err) { alert(err.message); }
+    }
+
+    function renderRequestQueue() {
+      const container = document.getElementById('queue-container');
+      container.innerHTML = '';
+      let filteredRequests = globalRequestsArray;
+      
+      if (currentRole === 'maintenance') {
+        filteredRequests = globalRequestsArray.filter(req => !housekeepingTasks.includes(req.issue_category));
+      } else if (currentRole === 'housekeeping') {
+        filteredRequests = globalRequestsArray.filter(req => housekeepingTasks.includes(req.issue_category));
+      }
+
+      if (filteredRequests.length === 0) {
+        container.innerHTML = `<div class="text-center py-12 text-stone-400 font-medium">No operational workflows found in this queue.</div>`;
+        return;
+      }
+
+      filteredRequests.forEach(req => {
+        const isHK = housekeepingTasks.includes(req.issue_category);
+        const card = document.createElement('div');
+        const localTime = new Date(req.timestamp).toLocaleTimeString(navigator.language, { hour: '2-digit', minute: '2-digit', hour12: true });
+
+        card.className = `p-4 rounded-xl border transition ${req.status === 'completed' ? 'bg-stone-50 border-stone-200 opacity-60' : isHK ? 'bg-purple-50/50 border-purple-200 shadow-sm' : 'bg-amber-50/50 border-amber-200 shadow-sm'}`;
+        card.innerHTML = `
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="space-y-1 w-full">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2 py-0.5 text-xs font-bold rounded-full ${isHK ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'}">${isHK ? '🧹 ' : '🛠️ '}${req.issue_category}</span>
+                <span class="text-xs font-semibold text-stone-500 bg-stone-200/60 px-1.5 py-0.5 rounded">${localTime}</span>
+              </div>
+              <h4 class="text-xl font-bold text-stone-800">Room ${req.room_number}</h4>
+              <p class="text-sm text-stone-600 font-medium">Guest: ${req.guest_name}</p>
+              ${req.notes ? `<p class="text-xs text-stone-500 italic bg-white p-1.5 rounded border border-stone-200">"${req.notes}"</p>` : ''}
+              <div class="pt-2 mt-2 border-t border-stone-200/60 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-medium text-stone-500">
+                <span>📋 Opened By: <b class="text-stone-700">${req.createdBy || 'System'}</b></span>
+                ${req.status === 'completed' ? `<span>✔️ Fixed By: <b class="text-emerald-700">${req.completedBy || 'N/A'}</b></span>` : ''}
+              </div>
+            </div>
+            <div class="w-full sm:w-auto text-right self-end sm:self-center">
+              ${req.status === 'pending' && currentRole !== 'reception' ? `<button onclick="markTaskComplete('${req._id}')" class="w-full sm:w-auto px-4 py-2 text-sm font-bold text-white rounded-lg shadow-sm ${isHK ? 'bg-purple-600 hover:bg-purple-700' : 'bg-emerald-600 hover:bg-emerald-700'}">Mark Completed ✔</button>` : ''}
+              ${req.status === 'completed' ? `<span class="inline-flex items-center gap-1 text-sm font-bold text-emerald-600">✅ Completed</span>` : ''}
+            </div>
+          </div>`;
+        container.appendChild(card);
+      });
+    }
+
+    // 📊 🌟 UPGRADED LEDGER AUDIT GENERATOR BY TARGET DATE
+    async function fetchHistoricalReport() {
+      const dateVal = document.getElementById('report-date').value;
+      if (!dateVal) { alert("Please pinpoint a calendar date."); return; }
+      
+      const pane = document.getElementById('report-results-pane');
+      const tbody = document.getElementById('report-table-body');
+      
+      pane.classList.remove('hidden');
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-stone-400 font-medium animate-pulse">Assembling comprehensive shift audit matrices...</td></tr>`;
+      
+      try {
+        const response = await fetch(`/api/reports?date=${dateVal}`, { headers: { 'Authorization': `Bearer ${userToken}` } });
+        if (!response.ok) throw new Error("Could not extract database records.");
+        const data = await response.json();
+        
+        // 1. Calculate Analytics Values
+        document.getElementById('stat-total').innerText = data.metrics.total;
+        document.getElementById('stat-fixed').innerText = data.metrics.fixed;
+        document.getElementById('stat-pending').innerText = data.metrics.pending;
+        
+        let aggregateMinutes = 0;
+        let finishedCount = 0;
+
+        tbody.innerHTML = '';
+
+        if (data.requests.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" class="text-center py-12 text-stone-400 font-semibold bg-white">No service entries filed on this date.</td></tr>`;
+          document.getElementById('stat-speed').innerText = '--';
+          return;
+        }
+
+        // 2. Loop & Construct Table Rows
+        data.requests.forEach(req => {
+          const createdTime = new Date(req.timestamp);
+          const formattedStamp = createdTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          
+          let durationString = '--';
+          if (req.status === 'completed' && req.completedAt) {
+            const completedTime = new Date(req.completedAt);
+            const deltaMs = completedTime - createdTime;
+            const deltaMins = Math.round(deltaMs / (1000 * 60));
+            
+            aggregateMinutes += deltaMins;
+            finishedCount++;
+            
+            durationString = deltaMins < 60 ? `${deltaMins}m` : `${Math.floor(deltaMins / 60)}h ${deltaMins % 60}m`;
+          }
+
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-stone-50/80 transition-colors border-b border-stone-100 text-stone-700";
+          tr.innerHTML = `
+            <td class="p-3 font-mono font-medium text-stone-500">${formattedStamp}</td>
+            <td class="p-3 font-bold text-stone-900">Room ${req.room_number}</td>
+            <td class="p-3">
+              <span class="font-semibold text-stone-800 block">${req.issue_category}</span>
+              ${req.notes ? `<span class="text-[10px] text-stone-400 block italic max-w-xs truncate" title="${req.notes}">"${req.notes}"</span>` : ''}
+            </td>
+            <td class="p-3 font-mono text-stone-600">${req.createdBy || 'System'}</td>
+            <td class="p-3 font-mono text-stone-600">${req.completedBy || '<span class="text-stone-300">—</span>'}</td>
+            <td class="p-3 font-medium text-stone-500">${durationString}</td>
+            <td class="p-3 text-right">
+              <span class="inline-block px-2 py-0.5 text-[10px] font-extrabold rounded-md uppercase ${req.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}">
+                ${req.status}
+              </span>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // 3. Render Average Fix Speed Metrics
+        if (finishedCount > 0) {
+          const avg = Math.round(aggregateMinutes / finishedCount);
+          document.getElementById('stat-speed').innerText = avg < 60 ? `${avg} Mins` : `${Math.floor(avg / 60)}h ${avg % 60}m`;
+        } else {
+          document.getElementById('stat-speed').innerText = '--';
+        }
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-rose-600 font-bold bg-white">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    socket.on('new_request', (newReq) => { globalRequestsArray.unshift(newReq); renderRequestQueue(); });
+    socket.on('request_completed', (updatedReq) => {
+      const idx = globalRequestsArray.findIndex(r => r._id === updatedReq._id);
+      if (idx !== -1) { globalRequestsArray[idx] = updatedReq; renderRequestQueue(); }
+    });
+  </script>
+</body>
+</html>

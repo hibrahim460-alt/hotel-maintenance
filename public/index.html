@@ -6,349 +6,67 @@
   <title>WH Hotel Enterprise ERP</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <style>
+    .loading-shimmer { background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+    @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  </style>
 </head>
-<body class="bg-stone-100 text-stone-900 font-sans min-h-screen">
+<body class="bg-stone-50 text-stone-900 font-sans min-h-screen antialiased">
 
-  <!-- AUTHENTICATION SCREEN -->
-  <div id="screen-login" class="max-w-md mx-auto px-6 py-24">
-    <div class="bg-white p-8 rounded-2xl border border-stone-200 shadow-md">
-      <div class="text-center mb-6">
-        <span class="text-4xl">🏢</span>
-        <h2 class="text-2xl font-black mt-2 text-stone-800">WH Enterprise ERP</h2>
-        <p class="text-xs text-stone-500 mt-1">Provide department credentials to unlock device console</p>
+  <!-- GLOBAL NOTIFICATION TOAST -->
+  <div id="global-toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-stone-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 text-sm"></div>
+
+  <!-- AUTHENTICATION GATEWAY CONTAINER -->
+  <main id="auth-gate" class="max-w-md mx-auto px-6 py-24">
+    <div class="bg-white p-8 rounded-2xl border border-stone-200 shadow-xl">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-stone-900 text-white text-2xl font-black mb-3">WH</div>
+        <h2 class="text-2xl font-black tracking-tight text-stone-800">Enterprise Core</h2>
+        <p class="text-xs text-stone-400 mt-1">Provide your credentials to mount your workspace console</p>
       </div>
-      <form onsubmit="handleLoginRequest(event)" class="space-y-4">
+      <form id="login-form" class="space-y-4">
         <div>
-          <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Username ID</label>
-          <input type="text" id="login-user" required class="w-full p-2.5 border border-stone-300 rounded-lg text-sm">
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-500 mb-1">User Identification ID</label>
+          <input type="text" id="login-user" required autocomplete="username" class="w-full p-3 border border-stone-200 bg-stone-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900 focus:bg-white transition-all">
         </div>
         <div>
-          <label class="block text-xs font-bold uppercase text-stone-500 mb-1">Security Password</label>
-          <input type="password" id="login-pass" required class="w-full p-2.5 border border-stone-300 rounded-lg text-sm">
+          <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-500 mb-1">Security Password Token</label>
+          <input type="password" id="login-pass" required autocomplete="current-password" class="w-full p-3 border border-stone-200 bg-stone-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-900 focus:bg-white transition-all">
         </div>
-        <button type="submit" class="w-full py-3 bg-stone-800 text-white font-bold rounded-lg transition text-sm">Authorize Device</button>
+        <button type="submit" class="w-full py-3.5 bg-stone-900 text-white font-bold rounded-xl text-sm shadow-md hover:bg-stone-800 active:scale-[0.99] transition-all mt-2">Authorize Connection</button>
       </form>
     </div>
-  </div>
+  </main>
 
-  <!-- MAIN OPERATIONAL WORKSPACE -->
-  <div id="app-container" class="hidden max-w-7xl mx-auto px-4 py-6">
-    <header class="flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm mb-6 border border-stone-200 gap-4">
+  <!-- CONTROL PANEL MAIN WORKSPACE WORKSTATION -->
+  <div id="workspace-shell" class="hidden min-h-screen flex flex-col">
+    <!-- Main Sticky Navigation Bar -->
+    <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-stone-200/80 px-6 py-4 flex justify-between items-center">
       <div class="flex items-center gap-4">
-        <h2 class="text-xl font-bold text-stone-800">WH ERP Panel</h2>
-        <span id="user-badge" class="px-2 py-0.5 text-xs font-semibold bg-stone-100 text-stone-600 rounded border border-stone-200"></span>
+        <h1 class="font-black text-lg tracking-tight text-stone-900">WH <span class="font-light text-stone-400">ERP</span></h1>
+        <div id="user-badge" class="flex items-center gap-2 bg-stone-100 text-stone-700 px-3 py-1 rounded-full text-xs font-bold border border-stone-200"></div>
       </div>
-      <button onclick="logoutSession()" class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-md text-xs font-bold">🔒 Disconnect</button>
+      <div class="flex items-center gap-3">
+        <!-- GLOBAL APP WORKFLOW COMPONENT CONTROL BUTTONS -->
+        <div id="approval-pill-container" class="hidden">
+          <button id="nav-approvals-btn" class="relative px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-stone-950 font-bold text-xs rounded-lg transition flex items-center gap-2 shadow-xs">
+            🛎️ Approvals Inbox
+            <span id="global-approval-count" class="w-4 h-4 bg-white text-stone-950 font-black rounded-full flex items-center justify-center text-[9px]">0</span>
+          </button>
+        </div>
+        <button id="logout-btn" class="px-3 py-1.5 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-bold transition">Disconnect</button>
+      </div>
     </header>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- ADAPTIVE SYSTEM SUBMISSION FORM LINK -->
-      <div id="form-panel" class="bg-white p-6 rounded-xl border border-stone-200 h-fit space-y-4">
-        <h3 id="form-title" class="text-md font-bold text-stone-800 uppercase tracking-wider">Department Task Dispatch</h3>
-        <hr class="border-stone-100">
-        
-        <!-- Shared Form Insertion Area -->
-        <form id="dept-dynamic-form" onsubmit="handleDeptFormSubmit(event)" class="space-y-4"></form>
-      </div>
-
-      <!-- MAIN WORKSPACE WORKFLOW SCREENS -->
-      <div class="lg:col-span-2 space-y-6">
-        
-        <!-- ADMIN MODULE CONTAINER -->
-        <div id="admin-box" class="hidden bg-stone-900 text-white p-6 rounded-xl space-y-4">
-          <h3 class="text-amber-400 font-bold text-sm uppercase tracking-wider">👑 System Profile Controls</h3>
-          <form onsubmit="handleAccountCreation(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <input type="text" id="adm-user" placeholder="Username" required class="p-2 text-stone-900 text-xs rounded">
-            <input type="text" id="adm-pass" placeholder="Password" required class="p-2 text-stone-900 text-xs rounded">
-            <select id="adm-role" class="p-2 text-stone-900 text-xs rounded">
-              <option value="reception">🛎️ Reception</option>
-              <option value="maintenance">🛠️ Maintenance</option>
-              <option value="housekeeping">🧹 Housekeeping</option>
-              <option value="purchasing">📦 Purchasing</option>
-              <option value="reservations">📅 Reservations</option>
-              <option value="accounting">🧾 Accounting</option>
-              <option value="sales">📈 Sales</option>
-            </select>
-            <button type="submit" class="sm:col-span-3 py-1.5 bg-amber-500 text-stone-950 font-bold text-xs uppercase tracking-wider rounded mt-2">Provision Profile</button>
-          </form>
-          <div id="admin-user-list" class="text-xs space-y-1 pt-2 font-mono"></div>
-        </div>
-
-        <!-- RECEPTION / MAINTENANCE / HOUSEKEEPING QUEUE -->
-        <div id="queue-box" class="bg-white p-6 rounded-xl border border-stone-200">
-          <h3 id="queue-title" class="text-lg font-black text-stone-800 mb-4">Pipeline Stream</h3>
-          <div id="queue-container" class="space-y-3"></div>
-        </div>
-
-        <!-- SHIFT REPORT AUDITS -->
-        <div id="reports-box" class="hidden bg-white p-6 rounded-xl border border-stone-200 space-y-4">
-          <h3 class="text-lg font-black text-stone-800">Shift Logs Module</h3>
-          <div class="flex gap-2">
-            <input type="date" id="report-date" class="p-2 border rounded text-sm bg-stone-50">
-            <button onclick="fetchHistoricalReport()" class="px-4 py-2 bg-stone-800 text-white font-bold rounded text-sm">Query Date</button>
-          </div>
-          <div id="report-summary" class="text-xs space-y-1 font-mono text-stone-600 bg-stone-50 p-2 rounded border hidden"></div>
-        </div>
-
-      </div>
+    <!-- MAIN HOUSING INTERFACE BODY -->
+    <div class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <!-- DYNAMIC COMPONENT INJECTORS -->
+      <section id="module-input-target" class="lg:col-span-1 bg-white p-6 rounded-2xl border border-stone-200/80 shadow-xs h-fit"></section>
+      <section id="module-display-target" class="lg:col-span-3 space-y-6"></section>
     </div>
   </div>
 
-  <script>
-    const socket = io();
-    let userToken = localStorage.getItem('token') || '';
-    let currentRole = localStorage.getItem('role') || '';
-    let usernameString = localStorage.getItem('username') || '';
-    let localDataState = [];
-
-    const housekeepingTasks = ["In-house Room Cleaning", "Room Check-out", "add-Extra Bed", "add Baby-Crib ", "Extra Bath Towel"];
-    const maintenanceTasks = ["AC-Checkup", "Kettle is not working", "sink", "water leakage ", "Lighting", "fridge "];
-
-    if (userToken) activateSessionDashboard();
-
-    async function handleLoginRequest(event) {
-      event.preventDefault();
-      const payload = { username: document.getElementById('login-user').value.trim(), password: document.getElementById('login-pass').value };
-      try {
-        const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        const data = await res.json(); if (!res.ok) throw new Error(data.error);
-        localStorage.setItem('token', data.token); localStorage.setItem('role', data.role); localStorage.setItem('username', data.username);
-        userToken = data.token; currentRole = data.role; usernameString = data.username;
-        activateSessionDashboard();
-      } catch (err) { alert(err.message); }
-    }
-
-    function logoutSession() { localStorage.clear(); location.reload(); }
-
-    function activateSessionDashboard() {
-      document.getElementById('screen-login').classList.add('hidden');
-      document.getElementById('app-container').classList.remove('hidden');
-      document.getElementById('user-badge').innerText = `👤 ${usernameString.toUpperCase()} (${currentRole})`;
-      
-      const formEl = document.getElementById('dept-dynamic-form');
-      const qTitle = document.getElementById('queue-title');
-      
-      document.getElementById('admin-box').classList.add('hidden');
-      document.getElementById('reports-box').classList.add('hidden');
-      formEl.innerHTML = '';
-
-      // ADAPTIVE FORM GENERATION AND ACCESS SECURITY MODULATION BY INTERFACES
-      if (currentRole === 'admin' || currentRole === 'reception') {
-        document.getElementById('reports-box').classList.remove('hidden');
-        if (currentRole === 'admin') { document.getElementById('admin-box').classList.remove('hidden'); pullAdminUsers(); }
-        
-        qTitle.innerText = "🛎️ Core Operations Room Pipeline";
-        formEl.innerHTML = `
-          <input type="text" id="f_room" placeholder="Room Number" required class="w-full p-2 border rounded text-xs">
-          <input type="text" id="f_guest" placeholder="Guest Name" required class="w-full p-2 border rounded text-xs">
-          <select id="f_cat" class="w-full p-2 border rounded text-xs"></select>
-          <textarea id="f_notes" placeholder="Notes..." class="w-full p-2 border rounded text-xs"></textarea>
-          <button type="submit" class="w-full py-2 bg-stone-800 text-white font-bold text-xs uppercase rounded">Dispatch Request</button>
-        `;
-        const select = document.getElementById('f_cat');
-        housekeepingTasks.concat(maintenanceTasks).forEach(t => select.appendChild(new Option(t, t)));
-        loadCollectionData('/api/requests/today');
-
-      } else if (currentRole === 'housekeeping') {
-        qTitle.innerText = "🧹 Housekeeping Live Cleaning Tasks";
-        formEl.innerHTML = `
-          <input type="text" id="f_room" placeholder="Room Asset Defect Spotted" required class="w-full p-2 border rounded text-xs">
-          <select id="f_cat" class="w-full p-2 border rounded text-xs"></select>
-          <textarea id="f_notes" placeholder="Defect Details..." class="w-full p-2 border rounded text-xs"></textarea>
-          <button type="submit" class="w-full py-2 bg-purple-700 text-white font-bold text-xs uppercase rounded">File Maintenance Alert</button>
-        `;
-        maintenanceTasks.forEach(t => document.getElementById('f_cat').appendChild(new Option(t, t)));
-        loadCollectionData('/api/requests/today');
-
-      } else if (currentRole === 'maintenance') {
-        qTitle.innerText = "🛠️ Engineering Maintenance Open Tasks";
-        formEl.innerHTML = `<p class="text-xs text-stone-400 italic">Read-only queue pipeline. Action completions via operational check marks.</p>`;
-        loadCollectionData('/api/requests/today');
-
-      } else if (currentRole === 'purchasing') {
-        qTitle.innerText = "📦 Supply Chain & Inventory Requisitions";
-        formEl.innerHTML = `
-          <input type="text" id="p_item" placeholder="Item/Asset Name Needed" required class="w-full p-2 border rounded text-xs">
-          <input type="number" id="p_qty" placeholder="Quantity" required class="w-full p-2 border rounded text-xs">
-          <select id="p_dept" class="w-full p-2 border rounded text-xs">
-            <option value="housekeeping">🧹 Housekeeping Supplies</option>
-            <option value="maintenance">🛠️ Engineering Components</option>
-          </select>
-          <button type="submit" class="w-full py-2 bg-blue-700 text-white font-bold text-xs uppercase rounded">Submit Requisition</button>
-        `;
-        loadCollectionData('/api/purchasing/orders');
-
-      } else if (currentRole === 'reservations') {
-        qTitle.innerText = "📅 Confirmed Incoming Guest Registrations";
-        formEl.innerHTML = `
-          <input type="text" id="r_guest" placeholder="Future Guest Name" required class="w-full p-2 border rounded text-xs">
-          <input type="text" id="r_room" placeholder="Assigned Room" required class="w-full p-2 border rounded text-xs">
-          <input type="date" id="r_date" required class="w-full p-2 border rounded text-xs">
-          <select id="r_vip" class="w-full p-2 border rounded text-xs">
-            <option value="Standard">Standard Booking</option>
-            <option value="VIP">⭐ Executive VIP</option>
-            <option value="VVVIP">👑 Crown VVVIP</option>
-          </select>
-          <select id="r_setup" class="w-full p-2 border rounded text-xs">
-            <option value="">No pre-arrival setups needed</option>
-            <option value="add Baby-Crib ">Needs Baby-Crib Setup</option>
-            <option value="add-Extra Bed">Needs Extra Bed Placed</option>
-          </select>
-          <button type="submit" class="w-full py-2 bg-emerald-700 text-white font-bold text-xs uppercase rounded">Register Reservation</button>
-        `;
-        loadCollectionData('/api/reservations');
-
-      } else if (currentRole === 'accounting') {
-        qTitle.innerText = "🧾 Auditing Financial Ledger Bill Disputes";
-        formEl.innerHTML = `
-          <input type="text" id="a_room" placeholder="Disputed Room Number" required class="w-full p-2 border rounded text-xs">
-          <input type="number" id="a_amt" placeholder="Disputed Amount ($)" required class="w-full p-2 border rounded text-xs">
-          <textarea id="a_reason" placeholder="Reason for Dispute..." required class="w-full p-2 border rounded text-xs"></textarea>
-          <button type="submit" class="w-full py-2 bg-amber-700 text-white font-bold text-xs uppercase rounded">Log Bill Dispute</button>
-        `;
-        loadCollectionData('/api/accounting/disputes');
-
-      } else if (currentRole === 'sales') {
-        qTitle.innerText = "📈 B2B Corporate Leads Corporate Pipeline";
-        formEl.innerHTML = `
-          <input type="text" id="s_comp" placeholder="Company/Account Name" required class="w-full p-2 border rounded text-xs">
-          <input type="text" id="s_cont" placeholder="Point of Contact" required class="w-full p-2 border rounded text-xs">
-          <input type="number" id="s_rooms" placeholder="Group Room Block Size" required class="w-full p-2 border rounded text-xs">
-          <input type="number" id="s_rev" placeholder="Estimated Revenue Value ($)" required class="w-full p-2 border rounded text-xs">
-          <button type="submit" class="w-full py-2 bg-indigo-700 text-white font-bold text-xs uppercase rounded">Create Sales Lead</button>
-        `;
-        loadCollectionData('/api/sales/leads');
-      }
-    }
-
-    async function loadCollectionData(url) {
-      try {
-        const res = await fetch(url, { headers: { 'Authorization': `Bearer ${userToken}` } });
-        if (res.ok) { localDataState = await res.json(); renderDepartmentQueue(); }
-      } catch (e) {}
-    }
-
-    async function handleDeptFormSubmit(event) {
-      event.preventDefault();
-      let url = '', payload = {};
-
-      if (currentRole === 'reception' || currentRole === 'admin' || currentRole === 'housekeeping') {
-        url = '/api/requests';
-        payload = {
-          room_number: document.getElementById('f_room').value,
-          guest_name: document.getElementById('f_guest') ? document.getElementById('f_guest').value : "In-House Check",
-          issue_category: document.getElementById('f_cat').value,
-          notes: document.getElementById('f_notes').value
-        };
-      } else if (currentRole === 'purchasing') {
-        url = '/api/purchasing/orders';
-        payload = { item_name: document.getElementById('p_item').value, quantity_requested: document.getElementById('p_qty').value, department: document.getElementById('p_dept').value };
-      } else if (currentRole === 'reservations') {
-        url = '/api/reservations';
-        payload = { guest_name: document.getElementById('r_guest').value, room_number: document.getElementById('r_room').value, arrival_date: document.getElementById('r_date').value, vip_tier: document.getElementById('r_vip').value, special_amenities: document.getElementById('r_setup').value };
-      } else if (currentRole === 'accounting') {
-        url = '/api/accounting/disputes';
-        payload = { room_number: document.getElementById('a_room').value, disputed_amount: document.getElementById('a_amt').value, reason: document.getElementById('a_reason').value };
-      } else if (currentRole === 'sales') {
-        url = '/api/sales/leads';
-        payload = { company_name: document.getElementById('s_comp').value, contact_person: document.getElementById('s_cont').value, group_rooms_needed: document.getElementById('s_rooms').value, revenue_estimation: document.getElementById('s_rev').value };
-      }
-
-      try {
-        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` }, body: JSON.stringify(payload) });
-        if (res.ok) { document.getElementById('dept-dynamic-form').reset(); alert("Database ledger adjusted successfully."); activateSessionDashboard(); }
-      } catch (e) {}
-    }
-
-    // ADAPTIVE QUEUE RENDERING MATRIX
-    function renderDepartmentQueue() {
-      const container = document.getElementById('queue-container');
-      container.innerHTML = '';
-
-      if (localDataState.length === 0) {
-        container.innerHTML = `<p class="text-xs text-stone-400 py-6 text-center italic">No active data entities found in this dashboard window.</p>`;
-        return;
-      }
-
-      // Filter logic matches current operational restrictions
-      let displayList = localDataState;
-      if (currentRole === 'maintenance') displayList = localDataState.filter(r => !housekeepingTasks.includes(r.issue_category));
-      if (currentRole === 'housekeeping') displayList = localDataState.filter(r => housekeepingTasks.includes(r.issue_category));
-
-      displayList.forEach(item => {
-        const div = document.createElement('div');
-        div.className = "p-3 rounded-lg border text-xs bg-stone-50 border-stone-200 flex justify-between items-center";
-        
-        if (item.issue_category) { // Operational Request Rendering
-          div.innerHTML = `<div><b>Room ${item.room_number}</b> - ${item.issue_category} <span class="text-[10px] block text-stone-500">Status: ${item.status} | Created by: ${item.createdBy}</span></div>`;
-          if (item.status === 'pending' && !['reception', 'purchasing', 'sales', 'accounting'].includes(currentRole)) {
-            const btn = document.createElement('button'); btn.className = "px-2 py-1 bg-emerald-600 text-white font-bold rounded text-[10px]"; btn.innerText = "Complete";
-            btn.onclick = async () => { await fetch(`/api/requests/${item._id}/complete`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${userToken}` } }); activateSessionDashboard(); };
-            div.appendChild(btn);
-          }
-        } else if (item.item_name) { // Purchasing Rendering
-          div.innerHTML = `<div>📦 <b>${item.item_name}</b> (Qty: ${item.quantity_requested}) <span class="block text-[10px] text-stone-500">Dept: ${item.department} | Status: ${item.status}</span></div>`;
-          if (item.status === 'requested' && currentRole === 'purchasing') {
-            const btn = document.createElement('button'); btn.className = "px-2 py-1 bg-blue-600 text-white rounded text-[10px]"; btn.innerText = "Mark Ordered";
-            btn.onclick = async () => { await fetch(`/api/purchasing/orders/${item._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` }, body: JSON.stringify({ status: 'ordered' }) }); activateSessionDashboard(); };
-            div.appendChild(btn);
-          }
-        } else if (item.arrival_date) { // Reservations Rendering
-          div.innerHTML = `<div>📅 <b>${item.guest_name}</b> - Room ${item.room_number} <span class="block text-[10px] text-stone-500">Arrival: ${item.arrival_date} | Tier: ${item.vip_tier}</span></div>`;
-        } else if (item.disputed_amount) { // Accounting Rendering
-          div.innerHTML = `<div>🧾 <b>Room ${item.room_number}</b> - Dispute: $${item.disputed_amount} <span class="block text-[10px] text-stone-500">Reason: ${item.reason} | Status: ${item.status}</span></div>`;
-          if (item.status === 'pending_review' && currentRole === 'accounting') {
-            const btn = document.createElement('button'); btn.className = "px-2 py-1 bg-emerald-600 text-white rounded text-[10px]"; btn.innerText = "Approve Credit";
-            btn.onclick = async () => { await fetch(`/api/accounting/disputes/${item._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` }, body: JSON.stringify({ status: 'approved' }) }); activateSessionDashboard(); };
-            div.appendChild(btn);
-          }
-        } else if (item.company_name) { // Sales Rendering
-          div.innerHTML = `<div>📈 <b>${item.company_name}</b> - Value: $${item.revenue_estimation} <span class="block text-[10px] text-stone-500">Contact: ${item.contact_person} | Stage: ${item.pipeline_stage}</span></div>`;
-          if (item.pipeline_stage === 'Inquiry' && currentRole === 'sales') {
-            const btn = document.createElement('button'); btn.className = "px-2 py-1 bg-indigo-600 text-white rounded text-[10px]"; btn.innerText = "Sign Contract";
-            btn.onclick = async () => { await fetch(`/api/sales/leads/${item._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` }, body: JSON.stringify({ pipeline_stage: 'Contract Signed' }) }); activateSessionDashboard(); };
-            div.appendChild(btn);
-          }
-        }
-        container.appendChild(div);
-      });
-    }
-
-    async function pullAdminUsers() {
-      try {
-        const res = await fetch('/api/admin/users', { headers: { 'Authorization': `Bearer ${userToken}` } });
-        const list = await res.json();
-        document.getElementById('admin-user-list').innerHTML = list.map(u => `<div>• ${u.username} (${u.role})</div>`).join('');
-      } catch(e) {}
-    }
-
-    async function handleAccountCreation(e) {
-      e.preventDefault();
-      const payload = { username: document.getElementById('adm-user').value, password: document.getElementById('adm-pass').value, role: document.getElementById('adm-role').value };
-      const res = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${userToken}` }, body: JSON.stringify(payload) });
-      if (res.ok) { document.getElementById('adm-user').value = ''; document.getElementById('adm-pass').value = ''; pullAdminUsers(); }
-    }
-
-    async function fetchHistoricalReport() {
-      const d = document.getElementById('report-date').value; if (!d) return;
-      const res = await fetch(`/api/reports?date=${d}`, { headers: { 'Authorization': `Bearer ${userToken}` } });
-      const data = await res.json();
-      const sum = document.getElementById('report-summary');
-      sum.classList.remove('hidden');
-      sum.innerHTML = `<div>Total Day Logs Filed: ${data.metrics.total}</div><div>Resolved Tasks: ${data.metrics.fixed}</div><div>Unresolved at Shift Close: ${data.metrics.pending}</div>`;
-    }
-
-    // Real-time Event Subscriptions
-    socket.on('new_request', () => { if(['admin','reception','maintenance','housekeeping'].includes(currentRole)) activateSessionDashboard(); });
-    socket.on('request_completed', () => { if(['admin','reception','maintenance','housekeeping'].includes(currentRole)) activateSessionDashboard(); });
-    socket.on('new_purchasing_order', () => { if(currentRole==='purchasing' || currentRole==='admin') activateSessionDashboard(); });
-    socket.on('purchasing_order_updated', () => { if(currentRole==='purchasing' || currentRole==='admin') activateSessionDashboard(); });
-    socket.on('new_reservation', () => { if(currentRole==='reservations' || currentRole==='admin') activateSessionDashboard(); });
-    socket.on('new_dispute', () => { if(currentRole==='accounting' || currentRole==='admin') activateSessionDashboard(); });
-    socket.on('dispute_updated', () => { if(currentRole==='accounting' || currentRole==='admin') activateSessionDashboard(); });
-    socket.on('new_lead', () => { if(currentRole==='sales' || currentRole==='admin') activateSessionDashboard(); });
-    socket.on('lead_updated', () => { if(currentRole==='sales' || currentRole==='admin') activateSessionDashboard(); });
-  </script>
+  <!-- SCRIPT ROUTER APPLICATION ENGINE LINK -->
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

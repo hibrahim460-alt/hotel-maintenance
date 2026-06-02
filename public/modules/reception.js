@@ -31,28 +31,31 @@ function renderWorkspaceLayout() {
           <select id="fo_category" class="w-full p-2 bg-white border border-stone-200 text-stone-900 text-xs rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
             <!-- 🛠️ ENGINEERING & MAINTENANCE TEAM TASKS -->
             <optgroup label="🛠️ Engineering & Maintenance">
-              <option value="Maintenance">General Engineering Repair</option>
-              <option value="Maintenance">AC / HVAC Air Conditioning Malfunction</option>
-              <option value="Maintenance">Plumbing / Leak / Drainage Issue</option>
-              <option value="Maintenance">Electrical / Lighting / Power Outage</option>
-              <option value="Maintenance">TV / Wi-Fi Network / Connectivity Tech</option>
+              <option value="Maintenance">Electricity</option>
+              <option value="Maintenance">AC Not Working</option>
+              <option value="Maintenance">Toilet /Plumbing / Leak / Drainage Issue</option>
+              <option value="Maintenance">Lighting / Power Outage</option>
+              <option value="Maintenance">Wi-Fi Network / Connectivity Tech</option>
+              <option value="Maintenance">TV Check-up</option>
               <option value="Maintenance">Door Lock / Keycard Reader Fix</option>
             </optgroup>
             
             <!-- 🧹 HOUSEKEEPING TEAM TASKS -->
             <optgroup label="🧹 Housekeeping Operations">
-              <option value="Housekeeping">Full Room Cleaning Dispatch</option>
-              <option value="Housekeeping">Fresh Linen / Pillow / Towel Delivery</option>
-              <option value="Housekeeping">Bathroom Amenities Re-stock</option>
-              <option value="Housekeeping">Turn-down Service Delivery</option>
-              <option value="Housekeeping">Minibar Inspection & Refill</option>
+              <option value="Housekeeping">in-house cleaning</option>
+              <option value="Housekeeping">Check-out Cleaning</option>
+              <option value="Housekeeping">Send Hand Towel</option>
+              <option value="Housekeeping">Send Bath Towel</option>
+              <option value="Housekeeping">Send Ameneties</option>
+              <option value="Housekeeping">Do Not Clean the Room</option>
+              <option value="Housekeeping">Add Extra Amenities"Slippers, Robe, Coffee Tray"</option>
             </optgroup>
 
             <!-- 🛎️ FRONT DESK & GUEST SERVICE TASKS -->
             <optgroup label="🛎️ Front Office & Concierge">
               <option value="Front Desk">Front Desk Service Dispatch</option>
               <option value="Front Desk">Luggage Assistance / Bellboy Request</option>
-              <option value="Front Desk">Guest Wake-Up Call Setup</option>
+              <option value="Front Desk">Guest room service</option>
               <option value="Front Desk">Taxi / Transportation Arrangement</option>
             </optgroup>
 
@@ -60,6 +63,7 @@ function renderWorkspaceLayout() {
             <optgroup label="🍽️ Food & Beverage Room Service">
               <option value="Room Service">In-Room Dining Order Delivery</option>
               <option value="Room Service">Clear Used Dining Plates / Trays</option>
+               <option value="Room Service">In-Room Breakfast</option>
             </optgroup>
           </select>
         </div>

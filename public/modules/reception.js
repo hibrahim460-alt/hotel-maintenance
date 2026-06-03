@@ -125,7 +125,7 @@ async function fetchAndRenderLiveLayouts() {
 
   if (!mTarget) return;
 
-  // Clear targets
+  // Clear targets to prevent overlapping traces
   mTarget.innerHTML = hTarget.innerHTML = rTarget.innerHTML = fTarget.innerHTML = 
     `<span class="text-[10px] italic text-stone-400">No active workflows queued.</span>`;
 
@@ -140,18 +140,25 @@ async function fetchAndRenderLiveLayouts() {
       'Food & Beverage Room Service': []
     };
 
-    tasks.forEach(task => { if (lists[task.issue_category]) lists[task.issue_category].push(task); });
+    tasks.forEach(task => { 
+      if (lists[task.issue_category]) {
+        lists[task.issue_category].push(task); 
+      }
+    });
 
     renderSubset(mTarget, lists['Engineering & Maintenance']);
     renderSubset(hTarget, lists['Housekeeping Operations']);
     renderSubset(rTarget, lists['Front Office & Concierge']);
     renderSubset(fTarget, lists['Food & Beverage Room Service']);
 
-  } catch (err) { console.error("Pipeline feed sync defect:", err); }
+  } catch (err) { 
+    console.error("Pipeline feed sync defect:", err); 
+  }
 }
 
 function renderSubset(targetElement, dataset) {
   if (dataset.length === 0) return;
+  
   targetElement.innerHTML = dataset.map(task => {
     const isPending = task.status === 'pending';
     return `
@@ -182,21 +189,18 @@ function renderSubset(targetElement, dataset) {
 async function handleTaskSubmit(e) {
   e.preventDefault();
   
-  // 1. Extract values correctly matching the updated HTML form element IDs
   const room_number = document.getElementById('fo_room').value.trim();
   const guest_name = document.getElementById('fo_guest').value.trim();
-  const issue_category = document.getElementById('fo_dept_category').value; // Corrected ID reference
+  const issue_category = document.getElementById('fo_dept_category').value;
   const specific_task = document.getElementById('fo_task_action').value.trim();
   const notes = document.getElementById('fo_notes').value.trim();
 
-  // 2. Client-side sanity check to block early parsing runtime defects
   if (!room_number || !guest_name || !issue_category || !specific_task) {
     showToast("All essential order dispatch pipeline targets must be filled.", "error");
     return;
   }
 
   try {
-    // 3. Dispatch secure transaction with exact JSON parameters demanded by Mongoose
     const res = await secureFetch('/api/requests', {
       method: 'POST',
       body: JSON.stringify({ 
@@ -211,7 +215,7 @@ async function handleTaskSubmit(e) {
     if (res.ok) {
       showToast("Order dispatched to secure department pipeline.", "success");
       document.getElementById('fo-task-form').reset();
-      refresh(); // Reloads the live operational hub feeds instantly
+      refresh(); 
     } else {
       const serverError = await res.json();
       showToast(`Rejected: ${serverError.error || "Fields rejected by validation models."}`, "error");
@@ -224,8 +228,13 @@ async function handleTaskSubmit(e) {
 async function closeTaskInstance(taskId) {
   try {
     const res = await secureFetch(`/api/requests/${taskId}/complete`, { method: 'PATCH' });
-    if (res.ok) { showToast("Task signature closed.", "success"); refresh(); }
-  } catch (e) { showToast("Error signing off.", "error"); }
+    if (res.ok) { 
+      showToast("Task signature closed.", "success"); 
+      refresh(); 
+    }
+  } catch (e) { 
+    showToast("Error signing off.", "error"); 
+  }
 }
 
 async function compileDateRangeReport() {
@@ -233,7 +242,10 @@ async function compileDateRangeReport() {
   const end = document.getElementById('fo_report_end').value;
   const filterDept = document.getElementById('fo_report_dept_filter').value;
 
-  if (!start || !end) { showToast("Enter complete parameters.", "error"); return; }
+  if (!start || !end) { 
+    showToast("Enter complete parameters.", "error"); 
+    return; 
+  }
 
   try {
     let url = `/api/requests/today?startDate=${start}&endDate=${end}`;
@@ -263,7 +275,9 @@ async function compileDateRangeReport() {
         <div class="text-[8px] font-mono text-stone-400 pt-1">Created by: ${task.createdBy} | Handled by: ${task.completedBy || 'N/A'}</div>
       </div>
     `).join('');
-  } catch (err) { showToast("Failed to compile archives.", "error"); }
+  } catch (err) { 
+    showToast("Failed to compile archives.", "error"); 
+  }
 }
 
 function clearReportVaultView() {

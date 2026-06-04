@@ -1,131 +1,172 @@
+// public/app.js
+// Central Real-Time Operating Engine Matrix Control Hub
+
+// Initialize dynamic communication link to the backend server
 const socket = io();
 
-export const AppState = {
-  token: localStorage.getItem('token') || '',
-  role: localStorage.getItem('role') || '',
-  username: localStorage.getItem('username') || '',
-  modules: {}
+// Core Architecture State Registry
+let currentUserSessionToken = null;
+
+// DOM Element Selectors
+const authGatePanel = document.getElementById('auth-gate');
+const systemWorkspaceShell = document.getElementById('workspace-shell');
+const coreLoginForm = document.getElementById('login-form');
+const platformUserBadge = document.getElementById('user-badge');
+const logoutActionBtn = document.getElementById('logout-btn');
+
+// -------------------------------------------------------------------------
+// 🔐 SESSION GATE & USER AUTHENTICATION
+// -------------------------------------------------------------------------
+if (coreLoginForm) {
+  coreLoginForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    
+    const inputUserHandle = document.getElementById('login-user');
+    const inputSecurityKey = document.getElementById('login-pass');
+    
+    if (!inputUserHandle || !inputSecurityKey) return;
+    
+    const userHandleValue = inputUserHandle.value.trim();
+    const securityKeyValue = inputSecurityKey.value;
+    
+    if (userHandleValue !== "" && securityKeyValue !== "") {
+      currentUserSessionToken = userHandleValue;
+      
+      // Update User Identity Badge display text
+      if (platformUserBadge) {
+        platformUserBadge.innerText = `SYSTEM PROFILE: ${userHandleValue.toUpperCase()}`;
+      }
+      
+      // Toggle view screens smoothly
+      if (authGatePanel) authGatePanel.classList.add('hidden');
+      if (systemWorkspaceShell) systemWorkspaceShell.classList.remove('hidden');
+      
+      // Notify the server engine of the new session connection
+      socket.emit('system:initialize-session', { 
+        handle: currentUserSessionToken,
+        timestamp: Date.now() 
+      });
+      
+      // Instantly request the core dashboard live feed data dump
+      socket.emit('request:fetch-live-feed');
+    }
+  });
+}
+
+if (logoutActionBtn) {
+  logoutActionBtn.addEventListener('click', () => {
+    currentUserSessionToken = null;
+    
+    // Clean out the form string parameters
+    document.getElementById('login-user').value = '';
+    document.getElementById('login-pass').value = '';
+    
+    if (systemWorkspaceShell) systemWorkspaceShell.classList.add('hidden');
+    if (authGatePanel) authGatePanel.classList.remove('hidden');
+  });
+}
+
+// -------------------------------------------------------------------------
+// 🌐 NATIVE RECEPTION PANEL DATA CONTROLLERS & ACTIONS
+// -------------------------------------------------------------------------
+
+// Submit a freshly built front office dispatch down the socket pipe
+window.transmitNativeDispatch = function() {
+  const areaTargetLocation = document.getElementById('native-dispatch-location');
+  const serviceTargetNotes = document.getElementById('native-dispatch-notes');
+  
+  if (!areaTargetLocation || !serviceTargetNotes) return;
+  if (areaTargetLocation.value.trim() === "" || serviceTargetNotes.value.trim() === "") return;
+  
+  const formattedPacket = {
+    location: areaTargetLocation.value.trim(),
+    notes: serviceTargetNotes.value.trim(),
+    operator: currentUserSessionToken || 'Front Office Operator',
+    unixTimestamp: Date.now()
+  };
+  
+  // Send data to the background database stream
+  socket.emit('action:create-dispatch', formattedPacket);
+  
+  // Wipe text inputs clean instantly
+  areaTargetLocation.value = '';
+  serviceTargetNotes.value = '';
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  if (AppState.token) { initializeWorkspace(); } 
-  else { document.getElementById('login-form').addEventListener('submit', handleLoginRequest); }
-  document.getElementById('logout-btn').addEventListener('click', terminateSession);
+// Resolve an active dispatch request
+window.resolveNativeDispatch = function(ticketUniqueRecordId) {
+  if (!ticketUniqueRecordId) return;
+  socket.emit('action:resolve-dispatch', { id: ticketUniqueRecordId });
+};
+
+// -------------------------------------------------------------------------
+// ⚡ CENTRAL STREAMING WEBSOCKET RESPONSIVE LISTENERS
+// -------------------------------------------------------------------------
+socket.on('connect', () => {
+  console.log('⚡ Central System Connection Link Secured.');
 });
 
-async function handleLoginRequest(e) {
-  e.preventDefault();
-  const username = document.getElementById('login-user').value.trim();
-  const password = document.getElementById('login-pass').value;
-
-  try {
-    const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Authorization Denied.');
-
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('role', data.role);
-    localStorage.setItem('username', data.username);
-
-    AppState.token = data.token; AppState.role = data.role; AppState.username = data.username;
-    showToast(`Access Verified. Initializing environment Matrix.`, 'success');
-    initializeWorkspace();
-  } catch (err) { showToast(err.message, 'error'); }
-}
-
-function terminateSession() { localStorage.clear(); location.reload(); }
-
-async function initializeWorkspace() {
-  document.getElementById('auth-gate').classList.add('hidden');
-  const shell = document.getElementById('workspace-shell'); shell.classList.remove('hidden');
-
-  const badge = document.getElementById('user-badge');
-  badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-indigo-500 inline-block animate-pulse"></span> SYSTEM PROFILE: ${AppState.username.toUpperCase()} (${AppState.role.toUpperCase()})`;
-
-  const inputTarget = document.getElementById('module-input-target');
-  const displayTarget = document.getElementById('module-display-target');
+// Build the Front Desk input forms dynamically inside Zone A
+socket.on('feed:render-input-controls', (payloadData) => {
+  const coreInputTargetContainer = document.getElementById('module-input-target');
+  if (!coreInputTargetContainer) return;
   
-  // High-Tier Dynamic Canvas Injection Matrix (Admin, Executive, Operations Roles)
-  if (['admin', 'executive', 'operations'].includes(AppState.role)) {
-    const shellWrapper = document.querySelector('#workspace-shell > .max-w-7xl');
-    shellWrapper.className = "max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-8";
-    
-    // Step 1: Establish Upper Command Deck Slots dynamically
-    shellWrapper.innerHTML = `
-      <!-- MANAGEMENT HUB CANVASES -->
-      <div id="management-deck-row" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <section id="mgmt-ctrl-slot" class="lg:col-span-4 bg-stone-900 text-white p-6 rounded-2xl border border-stone-800 shadow-xl h-fit"></section>
-        <section id="mgmt-view-slot" class="lg:col-span-8 bg-white text-stone-900 p-6 rounded-2xl border border-stone-200 shadow-sm max-h-[400px] overflow-y-auto"></section>
+  coreInputTargetContainer.innerHTML = `
+    <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-sm space-y-4">
+      <h3 class="text-xs font-black uppercase tracking-wider text-stone-900">Front Desk Dispatch Center</h3>
+      <div class="space-y-3">
+        <div>
+          <label class="text-[10px] uppercase font-bold text-stone-400 block mb-1">Target Location / Room</label>
+          <input type="text" id="native-dispatch-location" placeholder="e.g. Room 304 or Lobby" class="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-stone-900">
+        </div>
+        <div>
+          <label class="text-[10px] uppercase font-bold text-stone-400 block mb-1">Operational Instructions</label>
+          <textarea id="native-dispatch-notes" placeholder="Enter service details specifications..." class="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs h-16 focus:outline-none focus:ring-1 focus:ring-stone-900"></textarea>
+        </div>
+        <button onclick="transmitNativeDispatch()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-black text-xs uppercase tracking-wider rounded-xl transition shadow-md active:scale-[0.99]">Broadcast Live Order</button>
       </div>
-      
-      <!-- OPERATIONAL INFRASTRUCTURE ROWS -->
-      <div class="border-t border-stone-200 pt-6">
-        <h2 class="text-xs font-black uppercase tracking-widest text-stone-400 mb-6 flex items-center gap-2">
-          <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping"></span> Live Global Sub-System Instances
-        </h2>
-        <div id="master-admin-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-8"></div>
+    </div>
+  `;
+});
+
+// Render the incoming data records dynamically inside Zone B
+socket.on('feed:update-display-dashboard', (receivedStreamPayload) => {
+  const coreDisplayTargetContainer = document.getElementById('module-display-target');
+  if (!coreDisplayTargetContainer) return;
+  
+  const activeTaskLogsArray = receivedStreamPayload.items || [];
+  
+  if (activeTaskLogsArray.length === 0) {
+    coreDisplayTargetContainer.innerHTML = `
+      <div class="h-full border-2 border-dashed border-stone-200 rounded-2xl flex flex-col items-center justify-center p-8 text-center bg-white">
+        <span class="text-xl mb-1">📥</span>
+        <h3 class="text-xs font-black text-stone-400 uppercase tracking-wider">No Active Dispatches</h3>
+        <p class="text-[11px] text-stone-400 max-w-xs mt-0.5">Live streaming requests from your hotel database will appear here automatically.</p>
       </div>
     `;
-
-    // Step 2: Dynamically load component arrays based on role profiles
-    if (AppState.role === 'admin') {
-      // Admin displays Identity Profile Controls on the Command Deck
-      const adminModule = await import('./modules/admin.js');
-      adminModule.init(document.getElementById('mgmt-ctrl-slot'), document.getElementById('mgmt-view-slot'));
-      AppState.modules['admin'] = adminModule;
-    } else {
-      // Executives and Operations view reports and financial matrices directly on the Command Deck
-      const reportsModule = await import('./modules/reports.js');
-      reportsModule.init(document.getElementById('mgmt-ctrl-slot'), document.getElementById('mgmt-view-slot'));
-      AppState.modules['reports'] = reportsModule;
-    }
-
-    // Step 3: Loop and inject every functional application module live into the lower grid
-    const monitoringApps = ['bi', 'reception', 'housekeeping', 'maintenance', 'purchasing', 'accounting', 'sales', 'reservations'];
-    const gridElement = document.getElementById('master-admin-grid');
-
-    for (const app of monitoringApps) {
-      const widget = document.createElement('div');
-      widget.className = "bg-white p-6 rounded-2xl border border-stone-200/90 shadow-xs space-y-4";
-      widget.innerHTML = `
-        <div class="flex justify-between items-center border-b border-stone-100 pb-2">
-          <h4 class="text-xs font-black uppercase tracking-wider text-stone-400">Application Node Module: ${app}</h4>
-          <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-xs"></span>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div id="${app}-input-slot" class="md:col-span-1"></div>
-          <div id="${app}-display-slot" class="md:col-span-2 max-h-[350px] overflow-y-auto pr-1"></div>
-        </div>
-      `;
-      gridElement.appendChild(widget);
-
-      try {
-        const component = await import(`./modules/${app}.js`);
-        component.init(document.getElementById(`${app}-input-slot`), document.getElementById(`${app}-display-slot`));
-        AppState.modules[app] = component;
-      } catch (err) { console.error(`Component mapping execution breakdown on frame: ${app}`, err); }
-    }
-
-  } else {
-    // STANDARD ACCOUNT INTERFACES: Direct single-view fallback framework mapping
-    try {
-      const standardModule = await import(`./modules/${AppState.role}.js`);
-      AppState.modules[AppState.role] = standardModule; 
-      standardModule.init(inputTarget, displayTarget);
-    } catch (e) { showToast("Initialization runtime failure.", "error"); }
+    return;
   }
-}
-
-export async function secureFetch(url, options = {}) {
-  options.headers = { ...options.headers, 'Authorization': `Bearer ${AppState.token}`, 'Content-Type': 'application/json' };
-  const res = await fetch(url, options); if (res.status === 403 || res.status === 401) terminateSession(); return res;
-}
-
-export function showToast(msg, type = 'info') {
-  const t = document.getElementById('global-toast'); t.innerText = msg;
-  t.className = `fixed bottom-5 right-5 z-50 transition-all duration-300 px-4 py-3 rounded-xl shadow-xl font-bold text-white text-xs uppercase tracking-wide ${type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-stone-900'}`;
-  t.classList.remove('translate-y-20', 'opacity-0'); setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3500);
-}
-
-socket.on('new_request', () => { Object.values(AppState.modules).forEach(m => { if (m.refresh) m.refresh(); }); });
-socket.on('request_completed', () => { Object.values(AppState.modules).forEach(m => { if (m.refresh) m.refresh(); }); });
+  
+  let consolidatedLogRecordsHTML = activeTaskLogsArray.map(logRecord => `
+    <div class="bg-white border border-stone-200 rounded-xl p-4 shadow-xs flex justify-between items-center transition-all hover:border-stone-300">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <span class="bg-stone-950 text-white font-mono font-black text-[9px] px-1.5 py-0.5 rounded uppercase">Loc: ${logRecord.location}</span>
+          <span class="text-[10px] text-stone-400 font-medium">${logRecord.timestamp || 'Just Now'}</span>
+        </div>
+        <p class="text-xs font-bold text-stone-800">${logRecord.notes}</p>
+      </div>
+      <button onclick="resolveNativeDispatch('${logRecord.id}')" class="px-3 py-1.5 bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-700 text-[10px] font-black uppercase rounded-lg transition-all active:scale-[0.97]">Resolve</button>
+    </div>
+  `).join('');
+  
+  coreDisplayTargetContainer.innerHTML = `
+    <div class="space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xs font-black uppercase tracking-widest text-stone-400">Live Streaming Operational Logs</h2>
+        <span class="bg-indigo-50 text-indigo-700 font-mono text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-100 animate-pulse">● Live Pipeline Connected</span>
+      </div>
+      <div class="space-y-2">${consolidatedLogRecordsHTML}</div>
+    </div>
+  `;
+});

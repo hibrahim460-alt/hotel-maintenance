@@ -21,7 +21,11 @@ if (!MONGODB_URI) {
 }
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('🚀 MongoDB Cluster Active with Multi-Department Segregated Routing'))
+  .then(async () => {
+    console.log('🚀 MongoDB Cluster Active with Multi-Department Segregated Routing');
+    // Run the automatic user account setup script once connected
+    await initializeMasterAccounts();
+  })
   .catch(err => console.error('❌ MongoDB Connection Failure:', err));
 
 // --- DATA SCHEMAS ---
@@ -56,6 +60,32 @@ const Lead = mongoose.model('Lead', leadSchema);
 const reservationSchema = new mongoose.Schema({ guest_name: String, room_number: String, arrival_date: String, vip_tier: { type: String, default: 'Standard' }, special_amenities: String, timestamp: { type: Date, default: Date.now }, createdBy: String });
 const Reservation = mongoose.model('Reservation', reservationSchema);
 
+// --- 🔐 AUTOMATIC USER ACCOUNT SEEDING LOGIC ---
+async function initializeMasterAccounts() {
+  try {
+    // Array of default operator accounts to create if database collections are clean
+    const masterSeedUsers = [
+      { username: 'admin', password: 'adminpassword123', role: 'admin' },
+      { username: 'reception', password: 'receptionpass2026', role: 'reception' },
+      { username: 'housekeeping', password: 'hkpass2026', role: 'housekeeping' },
+      { username: 'maintenance', password: 'maintenancemod2026', role: 'maintenance' },
+      { username: 'operations', password: 'opscorekey2026', role: 'operations' }
+    ];
+
+    for (const masterAccount of masterSeedUsers) {
+      const accountExists = await User.findOne({ username: masterAccount.username });
+      if (!accountExists) {
+        const newStaffUser = new User(masterAccount);
+        await newStaffUser.save();
+        console.log(`✨ AUTO-CREATED ACCOUNT -> User: [${masterAccount.username.toUpperCase()}] | Role: [${masterAccount.role.toUpperCase()}]`);
+      }
+    }
+    console.log('🟢 System Access Profiles are fully initialized and synced.');
+  } catch (err) {
+    console.error('❌ Failed to verify or inject default master accounts:', err);
+  }
+}
+
 // --- MIDDLEWARES ---
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -82,11 +112,14 @@ function verifyHighTierClearance(req, res, next) {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: 'Missing input handle credentials.' });
+
     const user = await User.findOne({ username: username.toLowerCase() });
-    if (!user || user.password !== password) return res.status(401).json({ error: 'Invalid parameters.' });
+    if (!user || user.password !== password) return res.status(401).json({ error: 'Invalid security key credentials.' });
+
     const token = jwt.sign({ username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, role: user.role, username: user.username });
-  } catch (err) { res.status(500).json({ error: 'System fault.' }); }
+  } catch (err) { res.status(500).json({ error: 'System processing fault.' }); }
 });
 
 // --- 🛎️ DISPATCH WORK QUEUES (EXPLICIT SEGREGATION & FILTER MATRIX) ---
@@ -179,12 +212,9 @@ app.post('/api/sales/leads', authenticateToken, async (req, res) => { const doc 
 io.on('connection', (socket) => {
   console.log('📡 Gateway Link Connected via WebSockets.');
 
-  // This matches your app.js: socket.emit('system:initialize-session')
   socket.on('system:initialize-session', async (data) => {
     try {
       const targetUser = data.handle ? data.handle.toLowerCase() : '';
-      
-      // Look up user data properties from your MongoDB cluster cluster
       const dbRecord = await User.findOne({ username: targetUser });
       
       if (dbRecord) {
@@ -192,20 +222,17 @@ io.on('connection', (socket) => {
         socket.assignedRole = dbRecord.role;
         console.log(`🔐 Socket Session Authorized for Account: [${dbRecord.username.toUpperCase()}] Role: [${dbRecord.role}]`);
       } else {
-        // Fallback authorization profile for testing or unknown accounts to stop rejections
         socket.assignedUser = targetUser || 'front_office_agent';
         socket.assignedRole = 'reception';
-        console.log(`⚠️ Unknown User Handle "${targetUser}". Initialized with default RECEPTION role fallback parameters.`);
+        console.log(`⚠️ Unknown User Handle "${targetUser}". Initialized with default RECEPTION parameters.`);
       }
 
-      // Render controls to the client dashboard right away
       socket.emit('feed:render-input-controls', { role: socket.assignedRole });
     } catch (err) {
       console.error('Socket authentication processing failure:', err);
     }
   });
 
-  // This matches your app.js: socket.emit('request:fetch-live-feed')
   socket.on('request:fetch-live-feed', async () => {
     try {
       const userRole = socket.assignedRole || 'reception';
@@ -216,12 +243,11 @@ io.on('connection', (socket) => {
       } else if (userRole === 'housekeeping') {
         pipelineFilter = { issue_category: 'Housekeeping Operations' };
       } else {
-        pipelineFilter = {}; // Send all items to frontend views
+        pipelineFilter = {};
       }
 
       const matchingTasks = await Request.find(pipelineFilter).sort({ timestamp: -1 }).limit(50);
       
-      // Transmit items collection back up the pipeline array channel
       socket.emit('feed:update-display-dashboard', { 
         items: matchingTasks.map(task => ({
           id: task._id,
@@ -235,7 +261,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Action: Create real-time dispatches straight into MongoDB from Socket events
   socket.on('action:create-dispatch', async (data) => {
     try {
       const newTicket = new Request({
@@ -248,10 +273,7 @@ io.on('connection', (socket) => {
       });
       await newTicket.save();
       
-      // Broadcast update to all operational screens instantly
       io.emit('new_request', newTicket);
-      
-      // Force refresh live feed
       io.emit('request:fetch-live-feed');
     } catch (err) {
       console.error('Failed to create socket request:', err);

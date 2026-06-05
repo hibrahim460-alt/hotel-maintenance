@@ -23,14 +23,20 @@ if (coreLoginForm) {
     if (loginErrorDisplay) loginErrorDisplay.classList.add('hidden');
 
     const inputUserHandle = document.getElementById('login-user').value.trim();
-    const inputSecurityKey = document.getElementById('login-pass').value;
+    const inputSecurityKey = document.getElementById('login-pass').value.trim();
 
     try {
-      // Direct integration to your exact server.js HTTP Authentication logic
+      // Direct integration with standard, unified Content-Type headers
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/express+json', 'Accept': 'application/json', 'content-type': 'application/json' },
-        body: JSON.stringify({ username: inputUserHandle, password: inputSecurityKey })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ 
+          username: inputUserHandle, 
+          password: inputSecurityKey 
+        })
       });
 
       const dataPacket = await response.json();
@@ -181,7 +187,7 @@ socket.on('feed:update-display-dashboard', (receivedStreamPayload) => {
           <span class="bg-stone-950 text-white font-mono font-black text-[9px] px-1.5 py-0.5 rounded uppercase">Loc: ${logRecord.location}</span>
           <span class="text-[10px] text-stone-400 font-medium">${logRecord.timestamp || 'Just Now'}</span>
         </div>
-        <p class="text-xs font-bold text-stone-800">${logRecord.notes}</p>
+        <p class="text-xs font-bold text-stone-800"> ${logRecord.notes}</p>
       </div>
       <button onclick="resolveNativeDispatch('${logRecord.id}')" class="px-3 py-1.5 bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-700 text-[10px] font-black uppercase rounded-lg transition-all active:scale-[0.97]">Resolve</button>
     </div>

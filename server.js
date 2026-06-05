@@ -23,7 +23,6 @@ if (!MONGODB_URI) {
 mongoose.connect(MONGODB_URI)
   .then(async () => {
     console.log('🚀 MongoDB Cluster Active with Multi-Department Segregated Routing');
-    // Run the automatic user account setup script once connected
     await initializeMasterAccounts();
   })
   .catch(err => console.error('❌ MongoDB Connection Failure:', err));
@@ -31,7 +30,7 @@ mongoose.connect(MONGODB_URI)
 // --- DATA SCHEMAS ---
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true }, 
+  password: { type: mongoose.Schema.Types.Mixed, required: true }, // Mixed data type handles both number 111 and string "111" smoothly
   role: { type: String, required: true, enum: ['admin', 'executive', 'operations', 'reception', 'maintenance', 'housekeeping', 'purchasing', 'reservations', 'accounting', 'sales'] }
 });
 const User = mongoose.model('User', userSchema);
@@ -39,8 +38,8 @@ const User = mongoose.model('User', userSchema);
 const requestSchema = new mongoose.Schema({
   guest_name: { type: String, required: true },
   room_number: { type: String, required: true },
-  issue_category: { type: String, required: true }, // e.g., 'Engineering & Maintenance', 'Housekeeping Operations', 'Front Office & Concierge', 'Food & Beverage Room Service'
-  specific_task: { type: String, required: true },  // e.g., 'AC Repair', 'Fresh Linen'
+  issue_category: { type: String, required: true }, 
+  specific_task: { type: String, required: true },  
   notes: { type: String, default: "" },
   status: { type: String, default: 'pending' }, 
   timestamp: { type: Date, default: Date.now }, 
@@ -50,7 +49,7 @@ const requestSchema = new mongoose.Schema({
 });
 const Request = mongoose.model('Request', requestSchema);
 
-// Other models kept intact for absolute architectural integrity
+// Additional models kept intact for absolute architectural integrity
 const inventorySchema = new mongoose.Schema({ item_name: String, quantity_requested: Number, department: String, status: { type: String, default: 'requested' }, timestamp: { type: Date, default: Date.now }, createdBy: String, completedBy: String, completedAt: Date });
 const InventoryOrder = mongoose.model('InventoryOrder', inventorySchema);
 const disputeSchema = new mongoose.Schema({ room_number: String, disputed_amount: Number, reason: String, status: { type: String, default: 'pending_review' }, loggedBy: String, reviewedBy: String, timestamp: { type: Date, default: Date.now }, completedAt: Date });
@@ -63,9 +62,8 @@ const Reservation = mongoose.model('Reservation', reservationSchema);
 // --- 🔐 AUTOMATIC USER ACCOUNT SEEDING LOGIC ---
 async function initializeMasterAccounts() {
   try {
-    // Array of default operator accounts to create if database collections are clean
     const masterSeedUsers = [
-      { username: 'admin', password: 'adminpassword123', role: 'admin' },
+      { username: 'admin', password: '111', role: 'admin' },
       { username: 'reception', password: 'receptionpass2026', role: 'reception' },
       { username: 'housekeeping', password: 'hkpass2026', role: 'housekeeping' },
       { username: 'maintenance', password: 'maintenancemod2026', role: 'maintenance' },
@@ -116,8 +114,8 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = await User.findOne({ username: username.toLowerCase() });
     
-    // FIX: String(user.password) forces a string comparison so numbers like 111 match "111" perfectly
-    if (!user || String(user.password) !== String(password)) {
+    // FIX: String conversion prevents JavaScript strict validation from failing type tests
+    if (!user || String(user.password).trim() !== String(password).trim()) {
       return res.status(401).json({ error: 'Invalid security key credentials.' });
     }
 
@@ -128,7 +126,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// --- 🛎️ DISPATCH WORK QUEUES (EXPLICIT SEGREGATION & FILTER MATRIX) ---
+// --- 🛎️ DISPATCH WORK QUEUES ---
 app.get('/api/requests/today', authenticateToken, async (req, res) => {
   try {
     const { startDate, endDate, departmentFilter } = req.query;
@@ -150,7 +148,7 @@ app.get('/api/requests/today', authenticateToken, async (req, res) => {
       return res.json(await Request.find(query).sort({ timestamp: -1 }));
     }
 
-    const rollingCleanLimit = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 48 Hours
+    const rollingCleanLimit = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); 
     let pipelineFilter = {};
 
     if (req.user.role === 'maintenance') {
@@ -214,7 +212,7 @@ app.post('/api/reservations', authenticateToken, async (req, res) => { const doc
 app.get('/api/sales/leads', authenticateToken, async (req, res) => { res.json(await Lead.find()); });
 app.post('/api/sales/leads', authenticateToken, async (req, res) => { const doc = new Lead({ ...req.body, createdBy: req.user.username }); await doc.save(); res.status(201).json(doc); });
 
-// --- ⚡ WEBSOCKET INTERACTION MATRIX HUB (BRIDGED LOGIN FIX) ⚡ ---
+// --- ⚡ WEBSOCKET INTERACTION MATRIX HUB ⚡ ---
 io.on('connection', (socket) => {
   console.log('📡 Gateway Link Connected via WebSockets.');
 

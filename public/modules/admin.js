@@ -15,11 +15,13 @@ const SYSTEM_ROLES_ARRAY = [
 ];
 
 let currentlyEditingUserId = null;
+let cachedUsersList = []; // Local memory cache for instant search filtering
 
 export function init(formElement, viewElement) { 
   formContainer = formElement; 
   viewContainer = viewElement; 
   currentlyEditingUserId = null;
+  cachedUsersList = [];
   renderWorkspaceLayout(); 
   refresh(); 
 }
@@ -74,77 +76,149 @@ function renderWorkspaceLayout() {
   
   document.getElementById('adm-user-form').onsubmit = handleFormExecution;
   
+  // FIX 3: Real-time font-mono search bar injected above the roster list
   viewContainer.innerHTML = `
-    <div class="space-y-3">
-      <div class="flex justify-between items-center border-b border-stone-200 pb-2">
-        <h4 class="text-stone-500 text-xs font-black uppercase tracking-wider">System Enrolled Profiles Roster Index</h4>
-        <span id="roster-count-badge" class="px-2 py-0.5 bg-stone-100 rounded text-[10px] font-bold text-stone-600 border">0 Accounts</span>
+    <div class="space-y-4">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-stone-200 pb-3">
+        <div>
+          <h4 class="text-stone-500 text-xs font-black uppercase tracking-wider">System Enrolled Profiles Roster Index</h4>
+          <span id="roster-count-badge" class="inline-block mt-0.5 px-2 py-0.5 bg-stone-100 rounded text-[10px] font-bold text-stone-600 border">0 Accounts</span>
+        </div>
+        <div class="w-full sm:w-64">
+          <input type="text" id="adm-roster-search" placeholder="🔍 Search handle or role..." class="w-full p-2 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-1 focus:ring-stone-900">
+        </div>
       </div>
       <div id="adm-roster-list" class="space-y-2 text-[11px]"></div>
     </div>
   `;
+
+  document.getElementById('adm-roster-search').oninput = handleLocalSearchFilter;
 }
 
 export async function refresh() {
+  try {
+    const res = await secureFetch('/api/admin/users'); 
+    cachedUsersList = await res.json() || [];
+    renderRosterElementList(cachedUsersList);
+  } catch(err) {
+    console.error("Roster extraction error context tracing execution stream:", err);
+  }
+}
+
+function renderRosterElementList(usersArray) {
   const list = document.getElementById('adm-roster-list'); 
   if (!list) return;
   
-  try {
-    const res = await secureFetch('/api/admin/users'); 
-    const users = await res.json();
-    document.getElementById('roster-count-badge').innerText = `${(users || []).length} Profiles Active`;
+  document.getElementById('roster-count-badge').innerText = `${usersArray.length} Profiles Visible`;
+  
+  if (usersArray.length === 0) {
+    list.innerHTML = `<div class="p-4 text-center text-xs text-stone-400 italic bg-stone-50 border border-dashed rounded-xl">No matching user accounts identified.</div>`;
+    return;
+  }
+
+  list.innerHTML = usersArray.map(user => {
+    const isEditingThisUser = currentlyEditingUserId === user._id;
     
-    list.innerHTML = (users || []).map(user => {
-      return `
-        <div class="p-3 bg-stone-50 border border-stone-200 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-          <div class="space-y-1">
-            <div class="flex items-center gap-2">
-              <span class="text-stone-900 font-bold text-xs">${user.username}</span>
-              <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-stone-200 text-stone-700 border border-stone-300/40">${user.password}</span>
-            </div>
-            
-            <div class="grid grid-cols-5 gap-1.5 pt-1" id="matrix-grid-${user._id}">
-              ${SYSTEM_ROLES_ARRAY.map(roleOption => {
-                const isChecked = user.role === roleOption.id;
-                return `
-                  <label class="flex items-center gap-1 text-[9px] font-medium text-stone-500 select-none">
-                    <input type="checkbox" 
-                           data-user-id="${user._id}" 
-                           data-role-id="${roleOption.id}"
-                           ${isChecked ? 'checked' : ''} 
-                           disabled
-                           class="rounded border-stone-300 text-indigo-600 focus:ring-0 w-3 h-3 font-sans pointer-events-none">
-                    <span>${roleOption.label}</span>
-                  </label>
-                `;
-              }).join('')}
-            </div>
+    return `
+      <div class="p-3 bg-white border ${isEditingThisUser ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500/20' : 'border-stone-200'} rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3 transition-all">
+        <div class="space-y-1 w-full">
+          <div class="flex items-center gap-2">
+            <span class="text-stone-900 font-bold text-xs">${user.username}</span>
+            <!-- UNTOUCHED: Plain text badge display preserved exactly from image_f0eca3.png -->
+            <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-stone-200 text-stone-700 border border-stone-300/40">${user.password}</span>
           </div>
           
-          <div class="flex items-center gap-1.5 shrink-0 w-full md:w-auto justify-end border-t md:border-none pt-2 md:pt-0 border-stone-200">
+          <div class="pt-1.5 w-full" id="matrix-container-${user._id}">
+            ${isEditingThisUser ? `
+              <!-- FIX 2: Interactive drop-down selection module dynamically replaces checkboxes during active edits -->
+              <div class="flex items-center gap-2 max-w-xs">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Active Authority:</span>
+                <select id="inline-edit-role-${user._id}" class="p-1 bg-stone-50 border border-indigo-300 text-stone-900 text-[11px] rounded-md focus:outline-none font-bold">
+                  <option value="reception" ${user.role === 'reception' ? 'selected' : ''}>🛎️ Reception</option>
+                  <option value="housekeeping" ${user.role === 'housekeeping' ? 'selected' : ''}>🧹 Housekeeping</option>
+                  <option value="maintenance" ${user.role === 'maintenance' ? 'selected' : ''}>🛠️ Maintenance</option>
+                  <option value="purchasing" ${user.role === 'purchasing' ? 'selected' : ''}>📦 Purchasing</option>
+                  <option value="reservations" ${user.role === 'reservations' ? 'selected' : ''}>📅 Reservations</option>
+                  <option value="accounting" ${user.role === 'accounting' ? 'selected' : ''}>🧾 Accounting</option>
+                  <option value="sales" ${user.role === 'sales' ? 'selected' : ''}>📈 Sales</option>
+                  <option value="operations" ${user.role === 'operations' ? 'selected' : ''}>⚙️ Operations</option>
+                  <option value="executive" ${user.role === 'executive' ? 'selected' : ''}>📊 Executive</option>
+                  <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>👑 Admin</option>
+                </select>
+              </div>
+            ` : `
+              <!-- UNTOUCHED: Standard read-only matrix representation mapping active user array roles -->
+              <div class="grid grid-cols-5 gap-1.5" id="matrix-grid-${user._id}">
+                ${SYSTEM_ROLES_ARRAY.map(roleOption => {
+                  const isChecked = user.role === roleOption.id;
+                  return `
+                    <label class="flex items-center gap-1 text-[9px] font-medium text-stone-500 select-none">
+                      <input type="checkbox" 
+                             ${isChecked ? 'checked' : ''} 
+                             disabled
+                             class="rounded border-stone-300 text-indigo-600 focus:ring-0 w-3 h-3 pointer-events-none">
+                      <span>${roleOption.label}</span>
+                    </label>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-1.5 shrink-0 w-full md:w-auto justify-end border-t md:border-none pt-2 md:pt-0 border-stone-100">
+          ${isEditingThisUser ? `
+            <button type="button" 
+                    id="btn-save-inline-${user._id}"
+                    class="px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider shadow-xs hover:bg-indigo-700 transition-all">
+              Save
+            </button>
+            <button type="button" 
+                    id="btn-cancel-inline-${user._id}"
+                    class="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-stone-600 border rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
+              Cancel
+            </button>
+          ` : `
             <button type="button" 
                     data-edit-btn-id="${user._id}"
-                    class="px-2.5 py-1 bg-white hover:bg-stone-100 text-stone-700 border border-stone-300 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
+                    class="px-2.5 py-1 bg-white hover:bg-stone-50 text-stone-700 border border-stone-200 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
               Edit
             </button>
             <button type="button" 
                     data-delete-btn-id="${user._id}"
-                    class="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-stone-200 hover:border-rose-300 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
+                    class="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-stone-200 hover:border-rose-200 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all">
               Delete
             </button>
-          </div>
+          `}
         </div>
-      `;
-    }).join('');
+      </div>
+    `;
+  }).join('');
 
-    (users || []).forEach(user => {
+  // Event handlers attached directly to specific node identifiers
+  usersArray.forEach(user => {
+    const isEditingThisUser = currentlyEditingUserId === user._id;
+    if (isEditingThisUser) {
+      document.getElementById(`btn-save-inline-${user._id}`).onclick = () => saveInlineUserChanges(user);
+      document.getElementById(`btn-cancel-inline-${user._id}`).onclick = resetFormToDefaultState;
+    } else {
       document.querySelector(`[data-edit-btn-id="${user._id}"]`).onclick = () => activateInlineEditState(user);
       document.querySelector(`[data-delete-btn-id="${user._id}"]`).onclick = () => triggerIdentityPurge(user._id);
-    });
+    }
+  });
+}
 
-  } catch(err) {
-    console.error("Roster extraction error context tracing execution stream:", err);
+function handleLocalSearchFilter(e) {
+  const keyword = e.target.value.toLowerCase().trim();
+  if (!keyword) {
+    renderRosterElementList(cachedUsersList);
+    return;
   }
+  const filtered = cachedUsersList.filter(u => 
+    u.username.toLowerCase().includes(keyword) || 
+    u.role.toLowerCase().includes(keyword)
+  );
+  renderRosterElementList(filtered);
 }
 
 function activateInlineEditState(user) {
@@ -168,40 +242,51 @@ function activateInlineEditState(user) {
   `;
   
   document.getElementById('btn-cancel-edit').onclick = resetFormToDefaultState;
-  
-  document.querySelectorAll('input[data-user-id]').forEach(checkbox => {
-    if (checkbox.getAttribute('data-user-id') === user._id) {
-      checkbox.disabled = false;
-      checkbox.style.pointerEvents = 'auto';
-      
-      checkbox.onclick = (e) => {
-        const checkedRole = e.target.getAttribute('data-role-id');
-        document.getElementById('adm_role').value = checkedRole;
-        
-        document.querySelectorAll(`input[data-user-id="${user._id}"]`).forEach(cb => {
-          if (cb.getAttribute('data-role-id') !== checkedRole) cb.checked = false;
-        });
-      };
-    } else {
-      checkbox.disabled = true;
-      checkbox.style.pointerEvents = 'none';
-    }
-  });
-
-  showToast(`Modifying clearance access configuration bounds for: ${user.username}`);
+  renderRosterElementList(cachedUsersList);
 }
 
 function resetFormToDefaultState() {
   currentlyEditingUserId = null;
-  document.getElementById('adm-user-form').reset();
-  document.getElementById('adm_user').disabled = false;
-  document.getElementById('form-context-title').innerText = "Provision New Account Identity";
-  document.getElementById('form-action-button-group').innerHTML = `
-    <button type="submit" class="w-full py-2 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black text-[11px] uppercase tracking-wider rounded-lg transition-all">
-      Provision User Access
-    </button>
-  `;
+  const form = document.getElementById('adm-user-form');
+  if (form) form.reset();
+  
+  const userInp = document.getElementById('adm_user');
+  if (userInp) userInp.disabled = false;
+  
+  const title = document.getElementById('form-context-title');
+  if (title) title.innerText = "Provision New Account Identity";
+  
+  const btnGroup = document.getElementById('form-action-button-group');
+  if (btnGroup) {
+    btnGroup.innerHTML = `
+      <button type="submit" class="w-full py-2 bg-amber-500 hover:bg-amber-600 text-stone-950 font-black text-[11px] uppercase tracking-wider rounded-lg transition-all">
+        Provision User Access
+      </button>
+    `;
+  }
+  
+  const searchInput = document.getElementById('adm-roster-search');
+  if (searchInput) searchInput.value = '';
+  
   refresh();
+}
+
+async function saveInlineUserChanges(user) {
+  const updatedPassword = document.getElementById('adm_pass').value.trim();
+  const updatedRole = document.getElementById(`inline-edit-role-${user._id}`).value;
+
+  const res = await secureFetch(`/api/admin/users/${user._id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ password: updatedPassword, role: updatedRole })
+  });
+  const data = await res.json();
+  
+  if (res.ok) {
+    showToast("Identity permission matrix modified successfully.", "success");
+    resetFormToDefaultState();
+  } else {
+    showToast(data.error || "Profile adjustment transaction declined.", "error");
+  }
 }
 
 async function handleFormExecution(e) {

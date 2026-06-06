@@ -34,8 +34,8 @@ const User = mongoose.model('User', userSchema);
 const requestSchema = new mongoose.Schema({
   guest_name: { type: String, required: true },
   room_number: { type: String, required: true },
-  issue_category: { type: String, required: true }, // e.g., 'Engineering & Maintenance', 'Housekeeping Operations', 'Front Office & Concierge', 'Food & Beverage Room Service'
-  specific_task: { type: String, required: true },  // e.g., 'AC Repair', 'Fresh Linen'
+  issue_category: { type: String, required: true }, 
+  specific_task: { type: String, required: true },  
   notes: { type: String, default: "" },
   status: { type: String, default: 'pending' }, 
   timestamp: { type: Date, default: Date.now }, 
@@ -45,7 +45,6 @@ const requestSchema = new mongoose.Schema({
 });
 const Request = mongoose.model('Request', requestSchema);
 
-// Other models kept intact for absolute architectural integrity
 const inventorySchema = new mongoose.Schema({ item_name: String, quantity_requested: Number, department: String, status: { type: String, default: 'requested' }, timestamp: { type: Date, default: Date.now }, createdBy: String, completedBy: String, completedAt: Date });
 const InventoryOrder = mongoose.model('InventoryOrder', inventorySchema);
 const disputeSchema = new mongoose.Schema({ room_number: String, disputed_amount: Number, reason: String, status: { type: String, default: 'pending_review' }, loggedBy: String, reviewedBy: String, timestamp: { type: Date, default: Date.now }, completedAt: Date });
@@ -88,12 +87,11 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'System fault.' }); }
 });
 
-// --- 🛎️ DISPATCH WORK QUEUES (EXPLICIT SEGREGATION & FILTER MATRIX) ---
+// --- DISPATCH WORK QUEUES ---
 app.get('/api/requests/today', authenticateToken, async (req, res) => {
   try {
     const { startDate, endDate, departmentFilter } = req.query;
 
-    // A. Historical Date Report Endpoint (Scoped to 1-month retention limit)
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -111,16 +109,13 @@ app.get('/api/requests/today', authenticateToken, async (req, res) => {
       return res.json(await Request.find(query).sort({ timestamp: -1 }));
     }
 
-    // B. Smart Dynamic Live Redirection Filter Core
-    const rollingCleanLimit = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 48 Hours
-
+    const rollingCleanLimit = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); 
     let pipelineFilter = {};
 
-    // Segment data cleanly based on which department user role is loading the view
     if (req.user.role === 'maintenance') {
       pipelineFilter = { 
         issue_category: 'Engineering & Maintenance',
-        $or: [{ status: 'pending' }, { status: 'completed' }] // Maintenance keeps history visible
+        $or: [{ status: 'pending' }, { status: 'completed' }]
       };
     } else if (req.user.role === 'housekeeping') {
       pipelineFilter = {
@@ -128,7 +123,6 @@ app.get('/api/requests/today', authenticateToken, async (req, res) => {
         $or: [{ status: 'pending' }, { status: 'completed' }]
       };
     } else {
-      // Reception / Operations / Generic users get the auto-clean layout rules
       pipelineFilter = {
         $or: [
           { status: 'pending' },
@@ -140,7 +134,7 @@ app.get('/api/requests/today', authenticateToken, async (req, res) => {
 
     res.json(await Request.find(pipelineFilter).sort({ timestamp: -1 }));
   } catch (err) { 
-    res.status(500).json({ error: 'Failed to crawl documents or compute smart FIFO routing.' }); 
+    res.status(500).json({ error: 'Failed to crawl documents.' }); 
   }
 });
 
@@ -161,23 +155,141 @@ app.patch('/api/requests/:id/complete', authenticateToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Patch trace fault.' }); }
 });
 
-// --- BI, ADMINISTRATION & OTHER ENDPOINTS (UNALTERED LOGIC FOR ARCHITECTURE STABILITY) ---
+// --- Live Aggregation Pipeline Engine for BI Panel ---
 app.get('/api/bi/analytics', authenticateToken, verifyHighTierClearance, async (req, res) => {
   try {
-    const ops = await Request.aggregate([{ $facet: { total: [{ $count: "count" }], pending: [{ $match: { status: "pending" } }, { $count: "count" }] } }]);
-    res.json({ operations: { total: ops[0].total[0]?.count || 0, pending: ops[0].pending[0]?.count || 0 }, finance: [], sales: [], bookings: { total: 0, vipCount: 0 } });
-  } catch (e) { res.status(500).json(e); }
+    const opsData = await Request.aggregate([
+      {
+        $facet: {
+          metrics: [
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                pending: { $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] } }
+              }
+            }
+          ],
+          breakdown: [
+            { $group: { _id: "$issue_category", count: { $sum: 1 } } }
+          ]
+        }
+      }
+    ]);
+
+    const financeData = await Dispute.aggregate([
+      { $group: { _id: "$status", totalValue: { $sum: "$disputed_amount" } } }
+    ]);
+
+    const salesData = await Lead.aggregate([
+      { $group: { _id: "$pipeline_stage", projectedRevenue: { $sum: "$revenue_estimation" } } }
+    ]);
+
+    const bookingsData = await Reservation.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          vipCount: {
+            $sum: {
+              $cond: [{ $in: ["$vip_tier", ["VIP", "Executive", "Premium"]] }, 1, 0]
+            }
+          }
+        }
+      }
+    ]);
+
+    res.json({
+      operations: {
+        total: opsData[0]?.metrics[0]?.total || 0,
+        pending: opsData[0]?.metrics[0]?.pending || 0,
+        breakdown: opsData[0]?.breakdown || []
+      },
+      finance: financeData || [],
+      sales: salesData || [],
+      bookings: {
+        total: bookingsData[0]?.total || 0,
+        vipCount: bookingsData[0]?.vipCount || 0
+      }
+    });
+  } catch (e) { 
+    res.status(500).json({ error: 'Aggregation failure.' }); 
+  }
 });
-app.get('/api/admin/users', authenticateToken, async (req, res) => { if (req.user.role === 'admin') res.json(await User.find({}, 'username role password')); else res.status(403).json({ error: 'Denied' }); });
-app.post('/api/admin/users', authenticateToken, async (req, res) => { try { const u = new User(req.body); await u.save(); res.status(201).json(u); } catch (e) { res.status(400).json(e); } });
-app.get('/api/purchasing/orders', authenticateToken, async (req, res) => { res.json(await InventoryOrder.find()); });
-app.post('/api/purchasing/orders', authenticateToken, async (req, res) => { const doc = new InventoryOrder({ ...req.body, createdBy: req.user.username }); await doc.save(); res.status(201).json(doc); });
-app.get('/api/accounting/disputes', authenticateToken, async (req, res) => { res.json(await Dispute.find()); });
-app.post('/api/accounting/disputes', authenticateToken, async (req, res) => { const doc = new Dispute({ ...req.body, loggedBy: req.user.username }); await doc.save(); res.status(201).json(doc); });
-app.get('/api/reservations', authenticateToken, async (req, res) => { res.json(await Reservation.find()); });
-app.post('/api/reservations', authenticateToken, async (req, res) => { const doc = new Reservation({ ...req.body, createdBy: req.user.username }); await doc.save(); res.status(201).json(doc); });
-app.get('/api/sales/leads', authenticateToken, async (req, res) => { res.json(await Lead.find()); });
-app.post('/api/sales/leads', authenticateToken, async (req, res) => { const doc = new Lead({ ...req.body, createdBy: req.user.username }); await doc.save(); res.status(201).json(doc); });
+
+// --- Dynamic Cross-Department Compiled Reporting Engine ---
+app.get('/api/reports/compiled', authenticateToken, verifyHighTierClearance, async (req, res) => {
+  try {
+    const { department } = req.query;
+    let records = [];
+
+    switch (department) {
+      case 'reception':
+        records = await Request.find({ issue_category: 'Front Office & Concierge' }).sort({ timestamp: -1 });
+        break;
+      case 'housekeeping':
+        records = await Request.find({ issue_category: 'Housekeeping Operations' }).sort({ timestamp: -1 });
+        break;
+      case 'maintenance':
+        records = await Request.find({ issue_category: 'Engineering & Maintenance' }).sort({ timestamp: -1 });
+        break;
+      case 'purchasing':
+        records = await InventoryOrder.find().sort({ timestamp: -1 });
+        break;
+      case 'accounting':
+        records = await Dispute.find().sort({ timestamp: -1 });
+        break;
+      case 'reservations':
+        records = await Reservation.find().sort({ timestamp: -1 });
+        break;
+      case 'sales':
+        records = await Lead.find().sort({ timestamp: -1 });
+        break;
+      default:
+        return res.status(400).json({ error: "Invalid target entity sector parameter." });
+    }
+    res.json(records || []);
+  } catch (err) {
+    res.status(500).json({ error: "Database retrieval stream breakdown." });
+  }
+});
+
+// --- ADMINISTRATIVE MANAGEMENT ROUTES ---
+app.get('/api/admin/users', authenticateToken, async (req, res) => { 
+  if (req.user.role === 'admin') res.json(await User.find({}, 'username role password')); 
+  else res.status(403).json({ error: 'Denied' }); 
+});
+
+app.post('/api/admin/users', authenticateToken, async (req, res) => { 
+  try { 
+    const u = new User(req.body); 
+    await u.save(); 
+    res.status(201).json(u); 
+  } catch (e) { res.status(400).json({ error: 'Failed to provision identity profile context.' }); } 
+});
+
+app.put('/api/admin/users/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access Denied.' });
+    const { password, role } = req.body;
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, { password, role }, { new: true });
+    res.json(updatedUser);
+  } catch (err) {
+    res.status(500).json({ error: 'Identity transformation route execution blocked.' });
+  }
+});
+
+app.delete('/api/admin/users/:id', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access Denied.' });
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Identity context safely dropped from tracking loops.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Identity purging sequence generated a storage error.' });
+  }
+});
+
+// Catch-all route mapping
 app.get('*', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'index.html')); });
 
-server.listen(PORT, () => console.log(`🚀 Segregated Core Active on Port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Centralized Segregated Core Active on Port ${PORT}`));

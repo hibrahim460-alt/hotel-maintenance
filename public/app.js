@@ -45,20 +45,16 @@ async function initializeWorkspace() {
   const inputTarget = document.getElementById('module-input-target');
   const displayTarget = document.getElementById('module-display-target');
   
-  // High-Tier Dynamic Canvas Injection Matrix (Admin, Executive, Operations Roles)
   if (['admin', 'executive', 'operations'].includes(AppState.role)) {
     const shellWrapper = document.querySelector('#workspace-shell > .max-w-7xl');
     shellWrapper.className = "max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-8";
     
-    // Step 1: Establish Upper Command Deck Slots dynamically
     shellWrapper.innerHTML = `
-      <!-- MANAGEMENT HUB CANVASES -->
       <div id="management-deck-row" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <section id="mgmt-ctrl-slot" class="lg:col-span-4 bg-stone-900 text-white p-6 rounded-2xl border border-stone-800 shadow-xl h-fit"></section>
         <section id="mgmt-view-slot" class="lg:col-span-8 bg-white text-stone-900 p-6 rounded-2xl border border-stone-200 shadow-sm max-h-[400px] overflow-y-auto"></section>
       </div>
       
-      <!-- OPERATIONAL INFRASTRUCTURE ROWS -->
       <div class="border-t border-stone-200 pt-6">
         <h2 class="text-xs font-black uppercase tracking-widest text-stone-400 mb-6 flex items-center gap-2">
           <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping"></span> Live Global Sub-System Instances
@@ -67,20 +63,16 @@ async function initializeWorkspace() {
       </div>
     `;
 
-    // Step 2: Dynamically load component arrays based on role profiles
     if (AppState.role === 'admin') {
-      // Admin displays Identity Profile Controls on the Command Deck
       const adminModule = await import('./modules/admin.js');
       adminModule.init(document.getElementById('mgmt-ctrl-slot'), document.getElementById('mgmt-view-slot'));
       AppState.modules['admin'] = adminModule;
     } else {
-      // Executives and Operations view reports and financial matrices directly on the Command Deck
       const reportsModule = await import('./modules/reports.js');
       reportsModule.init(document.getElementById('mgmt-ctrl-slot'), document.getElementById('mgmt-view-slot'));
       AppState.modules['reports'] = reportsModule;
     }
 
-    // Step 3: Loop and inject every functional application module live into the lower grid
     const monitoringApps = ['bi', 'reception', 'housekeeping', 'maintenance', 'purchasing', 'accounting', 'sales', 'reservations'];
     const gridElement = document.getElementById('master-admin-grid');
 
@@ -107,7 +99,6 @@ async function initializeWorkspace() {
     }
 
   } else {
-    // STANDARD ACCOUNT INTERFACES: Direct single-view fallback framework mapping
     try {
       const standardModule = await import(`./modules/${AppState.role}.js`);
       AppState.modules[AppState.role] = standardModule; 

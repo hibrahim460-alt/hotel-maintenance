@@ -71,22 +71,20 @@ export async function refresh() {
     const res = await secureFetch(`/api/reports/compiled?department=${targetDept}`);
     const transactions = await res.json();
 
-    if (transactions.length === 0) {
+    if (!transactions || transactions.length === 0) {
       tbody.innerHTML = `<tr><td colspan="3" class="p-4 text-center italic text-stone-400">No archival transaction signatures found for this workspace entity sector.</td></tr>`;
       return;
     }
 
     tbody.innerHTML = transactions.map(t => {
-      // Clean display values dynamically depending on payload layout shapes
       const details = t.issue_category ? `${t.issue_category} (Rm ${t.room_number})` :
                       t.item_name ? `${t.item_name} x${t.quantity_requested}` :
                       t.disputed_amount ? `Dispute Rm ${t.room_number} ($${t.disputed_amount})` :
                       t.company_name ? `${t.company_name} (CRM)` : `Guest: ${t.guest_name} (Rm ${t.room_number})`;
 
       const creationUser = t.createdBy || t.loggedBy || "System Core Engine";
-      const creationTime = new Date(t.timestamp).toLocaleString();
+      const creationTime = t.timestamp ? new Date(t.timestamp).toLocaleString() : "Unknown Setup";
 
-      // Resolve secondary transaction signature logs
       const completionUser = t.completedBy || t.reviewedBy;
       const completionTime = t.completedAt ? new Date(t.completedAt).toLocaleString() : null;
 

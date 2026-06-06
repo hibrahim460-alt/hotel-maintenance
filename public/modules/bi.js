@@ -30,15 +30,26 @@ function renderWorkspaceLayout() {
 export async function refresh() {
   try {
     const res = await secureFetch('/api/bi/analytics'); const data = await res.json(); if (!res.ok) return;
-    document.getElementById('bi-ops-load').innerText = data.operations.total;
-    const finSum = data.finance.find(f => f._id === 'pending_review')?.totalValue || 0;
+    
+    const ops = data.operations || { total: 0, breakdown: [] };
+    const finance = data.finance || [];
+    const sales = data.sales || [];
+    const bookings = data.bookings || { total: 0, vipCount: 0 };
+
+    document.getElementById('bi-ops-load').innerText = ops.total || 0;
+    
+    const finSum = finance.find(f => f._id === 'pending_review')?.totalValue || 0;
     document.getElementById('bi-fin-risk').innerText = `$${finSum.toLocaleString()}`;
-    const saleSum = data.sales.reduce((acc, s) => acc + s.projectedRevenue, 0);
+    
+    const saleSum = sales.reduce((acc, s) => acc + (s.projectedRevenue || 0), 0);
     document.getElementById('bi-sales-pipe').innerText = `$${saleSum.toLocaleString()}`;
-    const vipRatio = data.bookings.total > 0 ? Math.round((data.bookings.vipCount / data.bookings.total) * 100) : 0;
+    
+    const vipRatio = bookings.total > 0 ? Math.round((bookings.vipCount / bookings.total) * 100) : 0;
     document.getElementById('bi-vip-depth').innerText = `${vipRatio}%`;
 
-    document.getElementById('bi-sales-list').innerHTML = data.sales.map(s => `<div class="flex justify-between"><span>${s._id}</span><span class="text-indigo-400 font-bold">$${s.projectedRevenue.toLocaleString()}</span></div>`).join('') || '<span class="italic text-stone-600">No leads tracking</span>';
-    document.getElementById('bi-ops-mix').innerHTML = data.operations.breakdown.map(c => `<div class="flex justify-between"><span>${c._id}</span><span class="text-amber-400 font-bold">${c.count} codes</span></div>`).join('') || '<span class="italic text-stone-600">No operations active</span>';
-  } catch(e){}
+    document.getElementById('bi-sales-list').innerHTML = sales.map(s => `<div class="flex justify-between"><span>${s._id || 'Inquiry'}</span><span class="text-indigo-400 font-bold">$${(s.projectedRevenue || 0).toLocaleString()}</span></div>`).join('') || '<span class="italic text-stone-600">No leads tracking</span>';
+    document.getElementById('bi-ops-mix').innerHTML = (ops.breakdown || []).map(c => `<div class="flex justify-between"><span>${c._id || 'Unassigned'}</span><span class="text-amber-400 font-bold">${c.count || 0} codes</span></div>`).join('') || '<span class="italic text-stone-600">No operations active</span>';
+  } catch(e){
+    console.error("Analytical compute iteration loop dropped an event frame:", e);
+  }
 }

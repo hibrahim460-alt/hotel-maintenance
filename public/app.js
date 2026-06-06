@@ -45,6 +45,7 @@ async function initializeWorkspace() {
   const inputTarget = document.getElementById('module-input-target');
   const displayTarget = document.getElementById('module-display-target');
   
+  // --- HIGH clearance DECK LAYOUT (ADMIN, CEO, COO) ---
   if (['admin', 'executive', 'operations'].includes(AppState.role)) {
     const shellWrapper = document.querySelector('#workspace-shell > .max-w-7xl');
     shellWrapper.className = "max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-8";
@@ -54,6 +55,7 @@ async function initializeWorkspace() {
         <section class="lg:col-span-4 space-y-4">
           <div id="mgmt-ctrl-slot" class="bg-stone-900 text-white p-6 rounded-2xl border border-stone-800 shadow-xl h-fit"></div>
           <div>
+            <!-- Exclusive Privilege Button: Visible only to Admin, CEO, COO -->
             <button id="btn-global-purge" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-[11px] uppercase tracking-wider rounded-xl transition shadow-md">
               🧼 Clean Resolved History
             </button>
@@ -108,16 +110,13 @@ async function initializeWorkspace() {
     }
 
   } else {
-    // Standard Department User View layout integration
+    // --- STANDARD DEPARTMENT USER VIEW ---
+    // Security update: The purge history button element has been completely removed from this layout block.
     inputTarget.innerHTML = `
       <div class="space-y-4">
         <div id="standard-input-anchor"></div>
-        <button id="btn-dept-purge" class="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white font-black text-[11px] uppercase tracking-wider rounded-xl transition shadow-md">
-          🧼 Clean My Department History
-        </button>
       </div>
     `;
-    document.getElementById('btn-dept-purge').onclick = triggerHistoryCleanup;
 
     try {
       const standardModule = await import(`./modules/${AppState.role}.js`);

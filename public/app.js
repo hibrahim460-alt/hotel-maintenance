@@ -51,8 +51,15 @@ async function initializeWorkspace() {
     
     shellWrapper.innerHTML = `
       <div id="management-deck-row" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <section id="mgmt-ctrl-slot" class="lg:col-span-4 bg-stone-900 text-white p-6 rounded-2xl border border-stone-800 shadow-xl h-fit"></section>
-        <section id="mgmt-view-slot" class="lg:col-span-8 bg-white text-stone-900 p-6 rounded-2xl border border-stone-200 shadow-sm max-h-[400px] overflow-y-auto"></section>
+        <section class="lg:col-span-4 space-y-4">
+          <div id="mgmt-ctrl-slot" class="bg-stone-900 text-white p-6 rounded-2xl border border-stone-800 shadow-xl h-fit"></div>
+          <div>
+            <button id="btn-global-purge" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-[11px] uppercase tracking-wider rounded-xl transition shadow-md">
+              🧼 Clean Resolved History
+            </button>
+          </div>
+        </section>
+        <section id="mgmt-view-slot" class="lg:col-span-8 bg-white text-stone-900 p-6 rounded-2xl border border-stone-200 shadow-sm max-h-[460px] overflow-y-auto"></section>
       </div>
       
       <div class="border-t border-stone-200 pt-6">
@@ -62,6 +69,8 @@ async function initializeWorkspace() {
         <div id="master-admin-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-8"></div>
       </div>
     `;
+
+    document.getElementById('btn-global-purge').onclick = triggerHistoryCleanup;
 
     if (AppState.role === 'admin') {
       const adminModule = await import('./modules/admin.js');
@@ -99,11 +108,37 @@ async function initializeWorkspace() {
     }
 
   } else {
+    // Standard Department User View layout integration
+    inputTarget.innerHTML = `
+      <div class="space-y-4">
+        <div id="standard-input-anchor"></div>
+        <button id="btn-dept-purge" class="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white font-black text-[11px] uppercase tracking-wider rounded-xl transition shadow-md">
+          🧼 Clean My Department History
+        </button>
+      </div>
+    `;
+    document.getElementById('btn-dept-purge').onclick = triggerHistoryCleanup;
+
     try {
       const standardModule = await import(`./modules/${AppState.role}.js`);
       AppState.modules[AppState.role] = standardModule; 
-      standardModule.init(inputTarget, displayTarget);
+      standardModule.init(document.getElementById('standard-input-anchor'), displayTarget);
     } catch (e) { showToast("Initialization runtime failure.", "error"); }
+  }
+}
+
+export async function triggerHistoryCleanup() {
+  if (!confirm("Confirm Purge: This will safely delete ALL COMPLETED requests inside your access level. All pending requests will stay active. Proceed?")) return;
+  try {
+    const res = await secureFetch('/api/requests/clean', { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(data.message, 'success');
+    } else {
+      showToast(data.error || 'Purge action declined.', 'error');
+    }
+  } catch (err) {
+    showToast('Network error while running history wipe.', 'error');
   }
 }
 

@@ -12,7 +12,7 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Network-first execution strategy pass-through
+  // Network-first execution strategy pass-through without blocking runtime operations
   e.respondWith(
     fetch(e.request).catch(() => caches.match(e.request))
   );

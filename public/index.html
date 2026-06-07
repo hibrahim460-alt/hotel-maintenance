@@ -1,61 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-stone-50">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WH ERP // CORE OS</title>
+  <title>WH Modular ERP Platform Engine</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
-<body class="bg-stone-950 text-stone-100 font-sans antialiased selection:bg-indigo-500/30">
+<body class="h-full text-stone-800 antialiased font-sans">
 
-  <div class="flex h-screen w-screen overflow-hidden">
-    
-    <!-- SYSTEM SIDEBAR NAVIGATION -->
-    <aside class="w-64 bg-stone-900 border-r border-stone-800 p-4 flex flex-col justify-between shrink-0">
-      <div class="space-y-4">
-        <div class="flex items-center gap-2 px-1 py-2 border-b border-stone-800">
-          <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span class="text-xs font-black uppercase tracking-widest text-white">WH ERP // CORE OS</span>
-        </div>
-        
-        <nav class="space-y-1 text-xs font-bold text-stone-400">
-          <button id="nav-admin" class="w-full flex items-center gap-2.5 px-3 py-2 bg-stone-800 text-white rounded-lg transition-all text-left">
-            <span>👑</span> Admin Console
-          </button>
-          <button id="nav-bi" class="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-stone-800 hover:text-white rounded-lg transition-all text-left">
-            <span>📊</span> BI Strategic Deck
-          </button>
-        </nav>
+  <div id="auth-gate" class="flex min-h-full items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+    <div class="w-full max-w-sm space-y-8 bg-white p-8 rounded-2xl border border-stone-200 shadow-xl">
+      <div>
+        <h2 class="text-center text-2xl font-black tracking-tight text-stone-900">WH Operations Console</h2>
+        <p class="mt-1.5 text-center text-xs text-stone-400">Enter centralized workspace security tokens.</p>
       </div>
-
-      <div class="pt-4 border-t border-stone-800">
-        <div class="text-[9px] text-center text-stone-500 font-mono tracking-tight">
-          v1.1 // Authorized Access Only
-        </div>
-      </div>
-    </aside>
-
-    <!-- WORKSPACE PANEL MOUNT REGION -->
-    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-stone-100 text-stone-900">
-      <header class="h-12 bg-white border-b border-stone-200 px-6 flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
-          <span class="text-xs font-black uppercase tracking-wider text-stone-500">SYSTEM PROFILE: ADMIN (ADMIN)</span>
-        </div>
-        <button class="px-2.5 py-1 text-[10px] font-black uppercase border border-stone-200 rounded-lg hover:bg-stone-50 transition-all text-stone-600 tracking-wider">
-          Terminate Link
-        </button>
-      </header>
-      
-      <div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-        <div id="app-form-slot" class="xl:col-span-1"></div>
-        <div id="app-view-slot" class="xl:col-span-2"></div>
-      </div>
-    </main>
-
+      <form id="login-form" class="space-y-4">
+        <input type="text" id="login-user" required placeholder="User System Handle ID" class="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-1 focus:ring-stone-900">
+        <input type="password" id="login-pass" required placeholder="Security Password Key" class="w-full p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-1 focus:ring-stone-900">
+        <button type="submit" class="w-full py-2.5 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs uppercase tracking-wide rounded-xl shadow-md transition-all active:scale-[0.99]">Establish Session</button>
+      </form>
+    </div>
   </div>
 
-  <!-- Absolute workspace base script routing -->
-  <script type="module" src="/js/app.js"></script>
+  <div id="workspace-shell" class="hidden min-h-full flex flex-col">
+    <header class="bg-white border-b border-stone-200 px-4 py-3 sm:px-6 lg:px-8 flex justify-between items-center shrink-0 shadow-xs">
+      <div class="flex items-center gap-4">
+        <h1 class="text-xs font-black uppercase tracking-widest text-stone-900 bg-stone-100 border px-2.5 py-1 rounded-md">WH ERP // Core OS</h1>
+        <span id="user-badge" class="text-xs font-mono font-bold text-stone-500">Connecting access...</span>
+      </div>
+      <button id="logout-btn" class="px-3 py-1 bg-stone-50 hover:bg-stone-100 border border-stone-200 rounded-lg text-[11px] font-black uppercase tracking-wider text-stone-600 transition">Terminate Link</button>
+    </header>
+
+    <main class="grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      <div id="standard-layout-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+        <section id="module-input-target" class="lg:col-span-1"></section>
+        <section id="module-display-target" class="lg:col-span-2"></section>
+      </div>
+    </main>
+  </div>
+
+  <div id="global-toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300"></div>
+
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

@@ -1,5 +1,12 @@
 const socket = io();
 
+const mapRoleToFilename = (roleName) => {
+  if (roleName === 'Engineering & Maintenance') return 'maintenance';
+  if (roleName === 'Housekeeping Operations') return 'housekeeping';
+  if (roleName === 'Front Office & Concierge') return 'reception';
+  return roleName.toLowerCase();
+};
+
 export const AppState = {
   token: localStorage.getItem('token') || '',
   role: localStorage.getItem('role') || '',
@@ -7,15 +14,13 @@ export const AppState = {
   modules: {}
 };
 
-// Global reference for native installer activation hook
 let nativeDeferredPrompt = null;
 
-// Register operational service worker protocols for engine tracking
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('⚙️ Operational Service Worker active tracking instance:', reg.scope))
-      .catch(err => console.error('❌ Service Worker registration context failure:', err));
+      .then(reg => console.log('⚙️ Service Worker active:', reg.scope))
+      .catch(err => console.error('❌ Service Worker registration failure:', err));
   });
 }
 
@@ -24,29 +29,21 @@ document.addEventListener('DOMContentLoaded', () => {
   else { document.getElementById('login-form').addEventListener('submit', handleLoginRequest); }
   document.getElementById('logout-btn').addEventListener('click', terminateSession);
 
-  // Hook operational event frames to intercept device ecosystem installation options
   const appInstallBtn = document.getElementById('pwa-install-btn');
   const appInstallWrapper = document.getElementById('install-wrapper');
 
   window.addEventListener('beforeinstallprompt', (e) => {
-    // Intercept native visual bars
     e.preventDefault();
-    // Cache the execution trigger frame
     nativeDeferredPrompt = e;
-    // Reveal installation block inside authentication view context
     if (appInstallWrapper) appInstallWrapper.classList.remove('hidden');
   });
 
   if (appInstallBtn) {
     appInstallBtn.addEventListener('click', async () => {
       if (!nativeDeferredPrompt) return;
-      // Reveal user execution intercept prompt screen
       nativeDeferredPrompt.prompt();
-      const { outcome } = await nativeDeferredPrompt.userChoice;
-      console.log(`User platform installer resolution response outcome code: ${outcome}`);
-      // Nullify register storage
+      await nativeDeferredPrompt.userChoice;
       nativeDeferredPrompt = null;
-      // Hide button layout elements
       appInstallWrapper.classList.add('hidden');
     });
   }
@@ -93,7 +90,6 @@ async function initializeWorkspace() {
         <section id="mgmt-ctrl-slot" class="lg:col-span-4 bg-stone-900 text-white p-6 rounded-2xl border border-stone-800 shadow-xl h-fit"></section>
         <section id="mgmt-view-slot" class="lg:col-span-8 bg-white text-stone-900 p-6 rounded-2xl border border-stone-200 shadow-sm max-h-[400px] overflow-y-auto"></section>
       </div>
-      
       <div class="border-t border-stone-200 pt-6">
         <h2 class="text-xs font-black uppercase tracking-widest text-stone-400 mb-6 flex items-center gap-2">
           <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-ping"></span> Live Global Sub-System Instances
@@ -134,17 +130,28 @@ async function initializeWorkspace() {
         const component = await import(`./modules/${app}.js`);
         component.init(document.getElementById(`${app}-input-slot`), document.getElementById(`${app}-display-slot`));
         AppState.modules[app] = component;
-      } catch (err) { console.error(`Component mapping execution breakdown on frame: ${app}`, err); }
+      } catch (err) { console.error(`Component mapping execution breakdown: ${app}`, err); }
     }
 
   } else {
     try {
-      const standardModule = await import(`./modules/${AppState.role}.js`);
+      const sanitizedFilename = mapRoleToFilename(AppState.role);
+      const standardModule = await import(`./modules/${sanitizedFilename}.js`);
       AppState.modules[AppState.role] = standardModule; 
       standardModule.init(inputTarget, displayTarget);
     } catch (e) { showToast("Initialization runtime failure.", "error"); }
   }
 }
+
+window.executeTaskResolution = async function(id) {
+  try {
+    const res = await secureFetch(`/api/requests/${id}/complete`, { method: 'PATCH' });
+    if (res.ok) {
+      showToast("Request safely resolved across systems.", "success");
+      Object.values(AppState.modules).forEach(m => { if (m.refresh) m.refresh(); });
+    }
+  } catch (err) { showToast("Failed to compile completion patch.", "error"); }
+};
 
 export async function secureFetch(url, options = {}) {
   options.headers = { ...options.headers, 'Authorization': `Bearer ${AppState.token}`, 'Content-Type': 'application/json' };

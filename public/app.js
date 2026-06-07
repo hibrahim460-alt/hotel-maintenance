@@ -7,10 +7,49 @@ export const AppState = {
   modules: {}
 };
 
+// Global reference for native installer activation hook
+let nativeDeferredPrompt = null;
+
+// Register operational service worker protocols for engine tracking
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('⚙️ Operational Service Worker active tracking instance:', reg.scope))
+      .catch(err => console.error('❌ Service Worker registration context failure:', err));
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   if (AppState.token) { initializeWorkspace(); } 
   else { document.getElementById('login-form').addEventListener('submit', handleLoginRequest); }
   document.getElementById('logout-btn').addEventListener('click', terminateSession);
+
+  // Hook operational event frames to intercept device ecosystem installation options
+  const appInstallBtn = document.getElementById('pwa-install-btn');
+  const appInstallWrapper = document.getElementById('install-wrapper');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // Intercept native visual bars
+    e.preventDefault();
+    // Cache the execution trigger frame
+    nativeDeferredPrompt = e;
+    // Reveal installation block inside authentication view context
+    if (appInstallWrapper) appInstallWrapper.classList.remove('hidden');
+  });
+
+  if (appInstallBtn) {
+    appInstallBtn.addEventListener('click', async () => {
+      if (!nativeDeferredPrompt) return;
+      // Reveal user execution intercept prompt screen
+      nativeDeferredPrompt.prompt();
+      const { outcome } = await nativeDeferredPrompt.userChoice;
+      console.log(`User platform installer resolution response outcome code: ${outcome}`);
+      // Nullify register storage
+      nativeDeferredPrompt = null;
+      // Hide button layout elements
+      appInstallWrapper.classList.add('hidden');
+    });
+  }
 });
 
 async function handleLoginRequest(e) {
